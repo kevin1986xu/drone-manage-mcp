@@ -1,0 +1,127 @@
+[2026-07-13T01:38:54.703Z] [debug] [vite] connecting...
+[2026-07-13T01:38:54.713Z] [debug] [vite] connected.
+[2026-07-13T01:38:54.743Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-07-13T01:38:54.821Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:38:54.821Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:39:33.127Z] [debug] [vite] connecting...
+[2026-07-13T01:39:33.130Z] [debug] [vite] connected.
+[2026-07-13T01:39:33.131Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-07-13T01:39:33.168Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:39:33.168Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:41:22.849Z] [debug] [vite] hot updated: /src/components/MapView.tsx
+[2026-07-13T01:41:22.872Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx?t=1783906882831:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:41:22.872Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx?t=1783906882831:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:41:30.606Z] [debug] [vite] hot updated: /src/components/MapView.tsx
+[2026-07-13T01:41:30.627Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx?t=1783906890599:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:41:30.627Z] [error] The above error occurred in the <MapView> component:
+
+    at MapView (http://localhost:5173/src/components/MapView.tsx?t=1783906890599:23:15)
+    at div
+    at div
+    at div
+    at Stage (http://localhost:5173/src/components/Stage.tsx:25:16)
+    at div
+    at div
+    at App (http://localhost:5173/src/App.tsx:26:18)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+[2026-07-13T01:41:44.230Z] [debug] [vite] hot updated: /src/components/MapView.tsx
+[2026-07-13T01:41:53.705Z] [debug] [vite] hot updated: /src/styles.css
+[2026-07-13T01:42:04.394Z] [debug] [vite] connecting...
+[2026-07-13T01:42:04.397Z] [debug] [vite] connected.
+[2026-07-13T01:42:04.398Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-07-13T01:44:01.997Z] [debug] [vite] hot updated: /src/styles.css
+[2026-07-13T01:47:10.907Z] [debug] [vite] connecting...
+[2026-07-13T01:47:10.908Z] [debug] [vite] connected.
+[2026-07-13T01:47:10.934Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-07-13T01:47:12.410Z] [debug] [vite] connecting...
+[2026-07-13T01:47:12.411Z] [debug] [vite] connected.
+[2026-07-13T01:47:12.415Z] [info] %cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold
+[2026-07-13T01:47:14.596Z] [debug] [vite] hot updated: /src/components/MapView.tsx
+[2026-07-13T01:47:16.617Z] [debug] [vite] hot updated: /src/components/Stage.tsx
+[2026-07-13T01:47:18.122Z] [debug] [vite] hot updated: /src/components/Stage.tsx

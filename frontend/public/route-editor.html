@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>航线编辑器（免登录）</title>
+<style>
+  :root{--bg:#0A0F15;--panel:#1A2530;--line:#243240;--text:#D9E2EA;--muted:#8496A6;--faint:#5A6B7C;
+        --accent:#3EC6B8;--plot:#E0A63C;
+        --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+        --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+  html,body{height:100%;margin:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);display:flex;flex-direction:column;overflow:hidden}
+  .tools{display:flex;align-items:center;gap:8px;height:44px;padding:0 14px;border-bottom:1px solid var(--line);flex-shrink:0}
+  .mode{padding:4px 12px;border:1px solid var(--line);border-radius:3px;background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--sans)}
+  .mode.active{color:var(--accent);border-color:var(--accent)}
+  .hint{font-size:12px;color:var(--faint);margin-left:6px}
+  .save{margin-left:auto;padding:6px 18px;border:none;border-radius:3px;background:var(--accent);color:#07211E;font-weight:600;font-size:12.5px;cursor:pointer;font-family:var(--sans)}
+  .save:disabled{opacity:.5;cursor:default}
+  #cv{flex:1;display:block;min-height:0;cursor:grab}
+  .status{height:26px;display:flex;align-items:center;gap:16px;padding:0 14px;border-top:1px solid var(--line);
+          font-family:var(--mono);font-size:11px;color:var(--faint);flex-shrink:0}
+  .err{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div class="tools">
+  <button class="mode active" data-m="move">移动航点</button>
+  <button class="mode" data-m="add">增加航点</button>
+  <button class="mode" data-m="del">删除航点</button>
+  <span class="hint" id="hint">拖动航点调整航线，完成后点右侧保存</span>
+  <button class="save" id="save">保存并回传</button>
+</div>
+<canvas id="cv"></canvas>
+<div class="status">
+  <span id="stRoute">—</span><span id="stLen">—</span>
+  <span style="margin-left:auto">免登录编辑 · token 有效期 10 min · postMessage 回传</span>
+</div>
+<script>
+'use strict';
+const qs = new URLSearchParams(location.search);
+const ROUTE_ID = qs.get('route_id'), TOKEN = qs.get('token');
+const cv = document.getElementById('cv'), hint = document.getElementById('hint');
+let route = null, plots = [], wps = [], mode = 'move', drag = -1, dirty = false;
+
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.mode').forEach(x => x.classList.toggle('active', x === b));
+  mode = b.dataset.m;
+});
+
+async function load() {
+  try {
+    const r = await fetch(`/api/routes/${ROUTE_ID}?token=${TOKEN}`);
+    if (!r.ok) throw new Error((await r.json()).detail || r.status);
+    route = await r.json();
+    plots = route.plots || [];
+    wps = route.waypoints.map(w => ({lon: w.lon, lat: w.lat}));
+    document.getElementById('stRoute').textContent = `${route.route_id} rev.${route.version}`;
+    updateLen();
+    draw();
+  } catch (e) {
+    hint.textContent = `加载失败：${e.message}`;
+    document.getElementById('save').disabled = true;
+  }
+}
+
+/* 投影：经纬度 → 画布（fit 全部要素） */
+let P = null, INV = null;
+function buildProj(w, h) {
+  const all = wps.concat(plots.flatMap(p => p.geometry.coordinates[0].map(c => ({lon: c[0], lat: c[1]}))));
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  all.forEach(p => { x0 = Math.min(x0, p.lon); x1 = Math.max(x1, p.lon); y0 = Math.min(y0, p.lat); y1 = Math.max(y1, p.lat); });
+  const pad = 50, kx = Math.cos(((y0 + y1) / 2) * Math.PI / 180);
+  const s = Math.min((w - 2 * pad) / ((x1 - x0) * kx), (h - 2 * pad) / (y1 - y0));
+  const ox = (w - (x1 - x0) * kx * s) / 2, oy = (h - (y1 - y0) * s) / 2;
+  P = p => [ox + (p.lon - x0) * kx * s, h - oy - (p.lat - y0) * s];
+  INV = (x, y) => ({lon: x0 + (x - ox) / (kx * s), lat: y0 + (h - oy - y) / s});
+}
+
+function fitCv() {
+  const dpr = devicePixelRatio || 1, r = cv.getBoundingClientRect();
+  if (cv.width !== r.width * dpr) { cv.width = r.width * dpr; cv.height = r.height * dpr; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return {ctx, w: r.width, h: r.height};
+}
+
+function dist(a, b) {
+  const kx = Math.cos(a.lat * Math.PI / 180) * 111.32, ky = 111.32;
+  return Math.hypot((b.lon - a.lon) * kx, (b.lat - a.lat) * ky);
+}
+function updateLen() {
+  let L = 0;
+  for (let i = 1; i < wps.length; i++) L += dist(wps[i - 1], wps[i]);
+  document.getElementById('stLen').textContent = `航程 ${L.toFixed(1)} km · ${wps.length} 航点`;
+}
+
+function draw() {
+  if (!route) return;
+  const {ctx, w, h} = fitCv();
+  buildProj(w, h);
+  ctx.fillStyle = '#0F161E'; ctx.fillRect(0, 0, w, h);
+  ctx.strokeStyle = '#151F29';
+  for (let x = 0; x < w; x += 44) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+  for (let y = 0; y < h; y += 44) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+  // 图斑
+  plots.forEach(p => {
+    const ring = p.geometry.coordinates[0];
+    ctx.beginPath();
+    ring.forEach((c, i) => { const q = P({lon: c[0], lat: c[1]}); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); });
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(224,166,60,.12)'; ctx.fill();
+    ctx.strokeStyle = '#E0A63C'; ctx.lineWidth = 1.2; ctx.stroke();
+    const q = P({lon: ring[0][0], lat: ring[0][1]});
+    ctx.fillStyle = '#C9A050'; ctx.font = '11px ui-monospace';
+    ctx.fillText('图斑 ' + p.plot_id, q[0], q[1] - 6);
+  });
+  // 航线
+  ctx.strokeStyle = '#3EC6B8'; ctx.lineWidth = 2; ctx.setLineDash([9, 6]);
+  ctx.beginPath();
+  wps.forEach((p, i) => { const q = P(p); i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1]); });
+  ctx.stroke(); ctx.setLineDash([]);
+  // 航点手柄
+  wps.forEach((p, i) => {
+    const q = P(p);
+    ctx.fillStyle = i === drag ? '#E0A63C' : (i === 0 || i === wps.length - 1 ? '#fff' : '#0F161E');
+    ctx.strokeStyle = '#3EC6B8'; ctx.lineWidth = 1.5;
+    ctx.fillRect(q[0] - 4.5, q[1] - 4.5, 9, 9); ctx.strokeRect(q[0] - 4.5, q[1] - 4.5, 9, 9);
+    ctx.fillStyle = '#7FDFD5'; ctx.font = '10px ui-monospace';
+    ctx.fillText(String(i + 1), q[0] + 7, q[1] - 6);
+  });
+}
+
+function hitTest(x, y) {
+  for (let i = 0; i < wps.length; i++) {
+    const q = P(wps[i]);
+    if (Math.hypot(q[0] - x, q[1] - y) < 10) return i;
+  }
+  return -1;
+}
+function nearestSegment(x, y) {
+  let best = 1, bd = 1e9;
+  for (let i = 1; i < wps.length; i++) {
+    const a = P(wps[i - 1]), b = P(wps[i]);
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * (b[0] - a[0]) + (y - a[1]) * (b[1] - a[1])) / ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2 || 1)));
+    const d = Math.hypot(a[0] + (b[0] - a[0]) * t - x, a[1] + (b[1] - a[1]) * t - y);
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+
+cv.addEventListener('pointerdown', e => {
+  const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+  const i = hitTest(x, y);
+  if (mode === 'move' && i >= 0) { drag = i; cv.setPointerCapture(e.pointerId); }
+  else if (mode === 'add') { wps.splice(nearestSegment(x, y), 0, INV(x, y)); dirty = true; updateLen(); }
+  else if (mode === 'del' && i > 0 && i < wps.length - 1) { wps.splice(i, 1); dirty = true; updateLen(); }
+  draw();
+});
+cv.addEventListener('pointermove', e => {
+  if (drag < 0) return;
+  const r = cv.getBoundingClientRect();
+  wps[drag] = INV(e.clientX - r.left, e.clientY - r.top);
+  dirty = true; updateLen(); draw();
+});
+cv.addEventListener('pointerup', () => { drag = -1; draw(); });
+
+document.getElementById('save').onclick = async () => {
+  const btn = document.getElementById('save');
+  btn.disabled = true; btn.textContent = '保存中…';
+  try {
+    const r = await fetch(`/api/routes/${ROUTE_ID}/waypoints`, {
+      method: 'PUT', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({token: TOKEN, waypoints: wps.map(p => ({lon: p.lon, lat: p.lat}))}),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || r.status);
+    btn.textContent = '已回传 ✓';
+    parent.postMessage({type: 'editor:saved', route_id: ROUTE_ID}, location.origin);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '保存并回传';
+    hint.textContent = `保存失败：${e.message}`;
+  }
+};
+
+addEventListener('resize', draw);
+load();
+
+// QA/自动化测试钩子（不影响交互）
+window.__editor = {
+  getWps: () => wps.map(p => ({...p})),
+  setWps: v => { wps = v.map(p => ({...p})); dirty = true; updateLen(); draw(); },
+};
+</script>
+</body>
+</html>

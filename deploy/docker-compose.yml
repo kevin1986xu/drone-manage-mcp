@@ -1,0 +1,71 @@
+# 低空智察 · 智能体控制台 —— 基础设施部署（Nacos MCP Registry + Higress AI 网关）
+#
+# 用途：为"MCP 工具层注册发现 + 网关统一治理"提供运行底座。
+#   backend 的 4 个 MCP server 注册到 Nacos → Higress 从 Nacos 发现并聚合
+#   → 对外暴露统一、可鉴权、可审计的 MCP 端点。
+#
+# 启动：  cp .env.example .env && docker compose --env-file .env up -d
+# 停止：  docker compose down          （加 -v 连数据卷一起删）
+# 日志：  docker compose logs -f nacos higress
+#
+# 注意：若你已有 Nacos（例如 drone-manage 现网的 192.168.101.21:8998），
+#       可注释掉下方 nacos 服务，直接让 higress 与 backend 指向现有 Nacos。
+
+name: uav-agent-infra
+
+services:
+  # ── Nacos：服务注册中心 + MCP Registry（standalone 单机、内嵌 Derby）──
+  nacos:
+    image: nacos/nacos-server:v3.2.1
+    container_name: uav-nacos
+    environment:
+      MODE: standalone
+      # 鉴权（生产必开）。以下三个是官方 docker 支持的环境变量
+      NACOS_AUTH_ENABLE: "true"
+      # token 必须是 Base64 串，且 Base64 解码后长度 ≥ 32 字节。示例解码为 "ThisIsMyCustomSecretKey0123456789"
+      NACOS_AUTH_TOKEN: "${NACOS_AUTH_TOKEN}"
+      NACOS_AUTH_IDENTITY_KEY: "${NACOS_AUTH_IDENTITY_KEY:-serverIdentity}"
+      NACOS_AUTH_IDENTITY_VALUE: "${NACOS_AUTH_IDENTITY_VALUE:-security}"
+      # MCP Registry 是 Nacos 3.2 内置能力，走主端口 8848 的 v3 admin API 即可
+      # 注册与发现（本项目已实测）；无需额外环境变量开启。
+    ports:
+      - "${NACOS_HTTP_PORT:-8848}:8848"      # 控制台 + OpenAPI + MCP Registry（v3 admin API）
+      - "${NACOS_GRPC_PORT:-9848}:9848"      # 客户端 gRPC（主端口+1000；ref 注册模式需要）
+    volumes:
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+      # 可选：需要 9080 独立 MCP 端点等自定义属性时，取消下面两行注释并编辑该文件
+      # - ./nacos-custom.properties:/home/nacos/conf/application.properties:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    restart: unless-stopped
+
+  # ── Higress：AI 网关（all-in-one：数据面 + 控制面 + 控制台）──
+  higress:
+    image: higress-registry.cn-hangzhou.cr.aliyuncs.com/higress/all-in-one:latest
+    container_name: uav-higress
+    depends_on:
+      nacos:
+        condition: service_healthy
+    environment:
+      # 用外部 Nacos 作为配置存储与服务/MCP 发现来源（对齐上面的 nacos 服务）
+      CONFIG_TEMPLATE: nacos
+      NACOS_SERVER_URL: "http://nacos:8848/nacos"
+      NACOS_USERNAME: "nacos"
+      NACOS_PASSWORD: "${NACOS_ADMIN_PASSWORD:-nacos}"
+      NACOS_NS: "public"
+    ports:
+      - "${HIGRESS_GATEWAY_HTTP_PORT:-80}:80"     # 网关 HTTP 入口（含聚合后的 MCP 端点）
+      - "${HIGRESS_GATEWAY_HTTPS_PORT:-443}:443"  # 网关 HTTPS 入口
+      - "${HIGRESS_CONSOLE_PORT:-8001}:8080"      # Higress 控制台（容器内 8080）
+    volumes:
+      - higress-data:/data
+    restart: unless-stopped
+
+volumes:
+  nacos-data:
+  nacos-logs:
+  higress-data:

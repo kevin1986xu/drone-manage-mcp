@@ -1,0 +1,586 @@
+<title>无人机智能体控制台 · 界面原型</title>
+<style>
+  :root{
+    --bg:#0D131A; --panel:#141C25; --panel2:#1A2530; --panel3:#20303E;
+    --line:#243240; --line-soft:#1C2833;
+    --text:#D9E2EA; --muted:#8496A6; --faint:#5A6B7C;
+    --accent:#3EC6B8; --accent-soft:rgba(62,198,184,.13);
+    --plot:#E0A63C; --plot-soft:rgba(224,166,60,.14);
+    --ok:#55B97F; --warn:#E0A63C; --bad:#E06060;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.65;overflow:hidden}
+  #app{display:flex;flex-direction:column;height:100vh}
+
+  /* ── 顶栏 ─────────────────────────── */
+  .topbar{display:flex;align-items:center;gap:16px;height:52px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:.02em}
+  .brand .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);box-shadow:0 0 8px rgba(62,198,184,.6)}
+  .brand small{color:var(--muted);font-weight:400;margin-left:2px}
+  .chips{display:flex;gap:8px;margin-left:auto}
+  .chip{display:flex;align-items:center;gap:6px;padding:3px 10px;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:12px;font-family:var(--mono)}
+  .chip i{width:6px;height:6px;border-radius:50%;background:var(--ok);flex-shrink:0}
+  .chip.busy i{background:var(--warn)}
+  .btn-reset{margin-left:4px;padding:4px 12px;background:none;border:1px solid var(--line);border-radius:3px;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--sans)}
+  .btn-reset:hover{color:var(--text);border-color:var(--faint)}
+  .btn-reset:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* ── 主体双栏 ─────────────────────── */
+  .main{display:flex;flex:1;min-height:0}
+  .chat{width:400px;min-width:320px;display:flex;flex-direction:column;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0}
+  .chat-head{display:flex;align-items:center;gap:8px;padding:10px 16px;border-bottom:1px solid var(--line-soft);font-size:13px;color:var(--muted)}
+  .chat-head b{color:var(--text);font-weight:600}
+  .agent-state{margin-left:auto;font-size:12px;font-family:var(--mono);color:var(--faint)}
+  .agent-state.think{color:var(--accent)}
+
+  .msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+  .msg-u{align-self:flex-end;max-width:85%;background:var(--accent-soft);border:1px solid rgba(62,198,184,.25);border-radius:8px 8px 2px 8px;padding:8px 12px}
+  .msg-a{align-self:flex-start;max-width:94%;padding:0 2px;white-space:pre-wrap}
+  .msg-a b{color:#fff}
+
+  .cot{align-self:stretch;border-left:2px solid var(--line);padding:2px 0 2px 12px;display:flex;flex-direction:column;gap:6px}
+  .cot-row{display:flex;align-items:baseline;gap:8px;font-size:12.5px}
+  .cot-row .tool{font-family:var(--mono);color:var(--accent);flex-shrink:0}
+  .cot-row .lbl{color:var(--muted)}
+  .cot-row .st{margin-left:auto;flex-shrink:0;font-family:var(--mono);font-size:12px}
+  .spin{display:inline-block;width:10px;height:10px;border:1.5px solid var(--faint);border-top-color:var(--accent);border-radius:50%;animation:rot .7s linear infinite;vertical-align:-1px}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .ok-mark{color:var(--ok)}
+  .cot-ret{font-size:12px;color:var(--faint);padding-left:2px}
+  .cot-ret em{color:var(--muted);font-style:normal}
+
+  .evt{align-self:center;font-family:var(--mono);font-size:11px;color:var(--faint);letter-spacing:.05em}
+  .evt b{color:var(--accent);font-weight:500}
+
+  .card{align-self:stretch;background:var(--panel2);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+  .card-head{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--panel3);font-weight:600;font-size:13px}
+  .card-head .warn-bar{width:4px;height:16px;border-radius:1px;background:var(--warn)}
+  .card-body{padding:10px 14px;display:flex;flex-direction:column;gap:5px}
+  .card-row{display:flex;justify-content:space-between;font-size:13px}
+  .card-row span:first-child{color:var(--muted)}
+  .card-row span:last-child{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .card-acts{display:flex;gap:8px;padding:10px 14px 14px}
+  .btn{flex:1;padding:8px 0;border-radius:4px;font-size:13.5px;font-weight:600;cursor:pointer;border:1px solid var(--line);background:none;color:var(--muted);font-family:var(--sans)}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .btn-go{background:var(--accent);border-color:var(--accent);color:#07211E}
+  .btn-go:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.45;cursor:default}
+  .card-note{padding:0 14px 12px;font-size:12px;color:var(--faint)}
+
+  .composer{border-top:1px solid var(--line);padding:10px 14px 14px;display:flex;flex-direction:column;gap:8px}
+  .hint-chip{align-self:flex-start;max-width:100%;padding:5px 12px;border:1px dashed rgba(62,198,184,.45);border-radius:16px;color:var(--accent);font-size:12.5px;cursor:pointer;background:none;font-family:var(--sans);text-align:left}
+  .hint-chip:hover{background:var(--accent-soft)}
+  .hint-chip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .in-row{display:flex;gap:8px}
+  .in-row input{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:9px 12px;color:var(--text);font-size:13.5px;font-family:var(--sans)}
+  .in-row input:focus{outline:none;border-color:var(--accent)}
+  .in-row input::placeholder{color:var(--faint)}
+  .send{width:64px;border:none;border-radius:4px;background:var(--accent);color:#07211E;font-weight:600;cursor:pointer;font-size:13.5px;font-family:var(--sans)}
+  .send:disabled{background:var(--panel3);color:var(--faint);cursor:default}
+  .send:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* ── 右栏效果区 ───────────────────── */
+  .stage{flex:1;display:flex;flex-direction:column;min-width:0;background:var(--bg)}
+  .stage-head{display:flex;align-items:center;gap:12px;height:42px;padding:0 16px;border-bottom:1px solid var(--line-soft);flex-shrink:0}
+  .stage-title{font-weight:600;font-size:13.5px}
+  .agui-tag{font-family:var(--mono);font-size:11.5px;color:var(--accent);background:var(--accent-soft);border:1px solid rgba(62,198,184,.25);padding:2px 9px;border-radius:3px}
+  .stage-sub{margin-left:auto;font-family:var(--mono);font-size:11.5px;color:var(--faint)}
+  .stage-body{flex:1;position:relative;min-height:0}
+  .view{position:absolute;inset:0;display:none}
+  .view.on{display:block}
+
+  /* 地图视图 */
+  #mapCanvas{width:100%;height:100%;display:block}
+  .legend{position:absolute;left:14px;bottom:14px;background:rgba(13,19,26,.85);border:1px solid var(--line);border-radius:4px;padding:8px 12px;font-size:11.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px;backdrop-filter:blur(2px)}
+  .legend div{display:flex;align-items:center;gap:8px}
+  .lg-plot{width:14px;height:9px;background:var(--plot-soft);border:1px solid var(--plot)}
+  .lg-drone{width:9px;height:9px;border-radius:50%;background:#E8B44C}
+  .lg-route{width:16px;height:0;border-top:2px dashed var(--accent)}
+  .map-toast{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(13,19,26,.9);border:1px solid var(--line);border-radius:4px;padding:5px 14px;font-size:12px;color:var(--muted);opacity:0;transition:opacity .4s}
+  .map-toast.on{opacity:1}
+
+  /* 编辑器视图（模拟免登录 iframe） */
+  .browser{display:flex;flex-direction:column;height:100%;background:#0A0F15}
+  .browser-bar{display:flex;align-items:center;gap:10px;height:38px;padding:0 14px;background:var(--panel2);border-bottom:1px solid var(--line);flex-shrink:0}
+  .b-dots{display:flex;gap:5px}
+  .b-dots i{width:9px;height:9px;border-radius:50%;background:var(--line)}
+  .b-url{flex:1;font-family:var(--mono);font-size:11.5px;color:var(--muted);background:var(--bg);border:1px solid var(--line-soft);border-radius:3px;padding:4px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b-url b{color:var(--accent);font-weight:500}
+  .editor-tools{display:flex;align-items:center;gap:8px;height:40px;padding:0 14px;border-bottom:1px solid var(--line-soft);flex-shrink:0}
+  .etool{padding:4px 12px;border:1px solid var(--line);border-radius:3px;background:none;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--sans)}
+  .etool.active{color:var(--accent);border-color:var(--accent)}
+  .etool:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .e-done{margin-left:auto;padding:5px 18px;border:none;border-radius:3px;background:var(--accent);color:#07211E;font-weight:600;font-size:12.5px;cursor:pointer;font-family:var(--sans)}
+  .e-done:focus-visible{outline:2px solid #fff;outline-offset:1px}
+  .editor-note{position:absolute;right:14px;bottom:14px;font-family:var(--mono);font-size:11px;color:var(--faint);background:rgba(13,19,26,.85);border:1px solid var(--line);padding:5px 10px;border-radius:3px}
+  #editCanvas{width:100%;flex:1;display:block;min-height:0}
+
+  /* 检查报告视图 */
+  .report-wrap{height:100%;overflow-y:auto;display:flex;justify-content:center;padding:32px 24px}
+  .report{width:min(560px,100%);align-self:flex-start}
+  .report h3{margin:0 0 4px;font-size:16px;font-weight:600}
+  .report .r-sub{font-family:var(--mono);font-size:12px;color:var(--faint);margin-bottom:18px}
+  .r-item{display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--panel);border:1px solid var(--line);border-radius:6px;margin-bottom:10px;opacity:0;transform:translateY(6px);transition:opacity .35s,transform .35s}
+  .r-item.show{opacity:1;transform:none}
+  .r-ico{width:34px;height:34px;border-radius:6px;background:var(--panel3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+  .r-main{flex:1;min-width:0}
+  .r-main b{display:block;font-size:13.5px}
+  .r-main span{font-size:12.5px;color:var(--muted)}
+  .r-main .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .pill{flex-shrink:0;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:10px;letter-spacing:.05em}
+  .pill.ok{color:var(--ok);background:rgba(85,185,127,.12);border:1px solid rgba(85,185,127,.3)}
+  .pill.warn{color:var(--warn);background:rgba(224,166,60,.1);border:1px solid rgba(224,166,60,.3)}
+
+  /* 底部状态条 */
+  .statusbar{display:flex;align-items:center;gap:18px;height:30px;padding:0 16px;border-top:1px solid var(--line-soft);font-family:var(--mono);font-size:11.5px;color:var(--faint);flex-shrink:0;font-variant-numeric:tabular-nums}
+  .statusbar .task{margin-left:auto;display:flex;align-items:center;gap:6px}
+  .statusbar .task i{width:6px;height:6px;border-radius:50%;background:var(--faint)}
+  .statusbar .task.run i{background:var(--accent);animation:blink 1.2s infinite}
+  .statusbar .task.done i{background:var(--ok)}
+  @keyframes blink{50%{opacity:.3}}
+
+  ::-webkit-scrollbar{width:8px}
+  ::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px}
+  ::-webkit-scrollbar-track{background:transparent}
+
+  @media (prefers-reduced-motion:reduce){
+    .spin{animation:none}
+    .statusbar .task.run i{animation:none}
+    .r-item{transition:none}
+  }
+  @media (max-width:880px){
+    .main{flex-direction:column}
+    .chat{width:auto;min-width:0;height:46vh;border-right:none;border-bottom:1px solid var(--line)}
+    .chips{display:none}
+  }
+</style>
+
+<div id="app">
+  <div class="topbar">
+    <div class="brand"><span class="dot"></span>低空智察<small>· 智能体控制台</small></div>
+    <div class="chips">
+      <span class="chip"><i></i>MCP&nbsp;3&nbsp;servers</span>
+      <span class="chip"><i></i>Qwen3-235B</span>
+      <span class="chip" id="aguiChip"><i></i>AG-UI&nbsp;SSE</span>
+    </div>
+    <button class="btn-reset" onclick="location.reload()">重新演示</button>
+  </div>
+
+  <div class="main">
+    <!-- 左栏：对话 -->
+    <div class="chat">
+      <div class="chat-head"><b>作业助手</b><span>· 飞行作业智能体</span><span class="agent-state" id="agentState">待命</span></div>
+      <div class="msgs" id="msgs"></div>
+      <div class="composer">
+        <button class="hint-chip" id="hintChip" hidden></button>
+        <div class="in-row">
+          <input id="inBox" placeholder="输入指令，例如：帮我查一下光明区的图斑" autocomplete="off">
+          <button class="send" id="sendBtn">发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右栏：效果区 -->
+    <div class="stage">
+      <div class="stage-head">
+        <span class="stage-title" id="stageTitle">作业地图 · 光明区</span>
+        <span class="agui-tag" id="aguiTag">AG-UI ▸ idle</span>
+        <span class="stage-sub" id="stageSub">等待智能体指令</span>
+      </div>
+      <div class="stage-body">
+        <!-- 地图 -->
+        <div class="view on" id="viewMap">
+          <canvas id="mapCanvas"></canvas>
+          <div class="legend" id="legend" hidden>
+            <div><span class="lg-plot"></span>下发图斑</div>
+            <div><span class="lg-drone"></span>可用无人机</div>
+            <div><span class="lg-route"></span>规划航线 R-0712</div>
+          </div>
+          <div class="map-toast" id="mapToast"></div>
+        </div>
+        <!-- 航线编辑（模拟 iframe） -->
+        <div class="view" id="viewEditor">
+          <div class="browser">
+            <div class="browser-bar">
+              <div class="b-dots"><i></i><i></i><i></i></div>
+              <div class="b-url">https://uav.szgov.example/route-editor?routeId=R-0712&amp;token=<b>eyJhbGciOi…（免登录临时凭证 · 10min）</b></div>
+            </div>
+            <div class="editor-tools">
+              <button class="etool active">移动航点</button>
+              <button class="etool">增加航点</button>
+              <button class="etool">删除航点</button>
+              <span style="font-size:12px;color:var(--faint);margin-left:4px">拖动 3 号航点已西移 120m（演示预置）</span>
+              <button class="e-done" id="editDone">完成编辑</button>
+            </div>
+            <canvas id="editCanvas"></canvas>
+            <div class="editor-note">嵌入方式：iframe · 编辑结果经 postMessage → AG-UI 回传</div>
+          </div>
+        </div>
+        <!-- 飞前检查报告 -->
+        <div class="view" id="viewReport">
+          <div class="report-wrap"><div class="report">
+            <h3>飞前安全检查 · D-12</h3>
+            <div class="r-sub">preflight_check · 航线 R-0712 · 2026-07-22 14:36</div>
+            <div id="reportList"></div>
+          </div></div>
+        </div>
+      </div>
+      <div class="statusbar">
+        <span>CGCS2000 / EPSG:4490</span>
+        <span>中心 113.9412°E 22.7385°N</span>
+        <span id="sbInfo">比例尺 1:8000</span>
+        <span class="task" id="taskChip"><i></i><span id="taskTxt">无任务</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, RM ? Math.min(ms, 60) : ms));
+const $ = id => document.getElementById(id);
+
+/* ═══════════ 地图数据（归一化坐标 1000×640） ═══════════ */
+const PLOTS = [
+  {id:'GM-01', pts:[[150,120],[235,108],[262,178],[182,200]], covered:false},
+  {id:'GM-02', pts:[[420,96],[508,112],[492,186],[404,172]], covered:true},
+  {id:'GM-03', pts:[[610,238],[700,226],[722,308],[624,322]], covered:true},
+  {id:'GM-04', pts:[[336,398],[424,382],[450,460],[352,480]], covered:true},
+  {id:'GM-05', pts:[[770,452],[852,438],[874,514],[782,528]], covered:false},
+];
+const DRONES = [
+  {id:'D-07', x:118, y:420, bat:'92%'},
+  {id:'D-12', x:552, y:552, bat:'87%'},
+  {id:'D-21', x:872, y:150, bat:'64%'},
+];
+let ROUTE = [[552,552],[440,462],[382,300],[430,140],[500,152],[470,214],[566,290],[664,292],[706,318],[624,412],[552,552]];
+const ROUTE_EDITED_IDX = 2, ROUTE_EDITED_TO = [326,332];
+
+const S = { plots:false, drones:false, route:false, highlight:false, edited:false,
+            flying:false, flyT:0, dash:0, editorMode:false };
+
+/* ═══════════ Canvas 绘制 ═══════════ */
+function fitCanvas(cv){
+  const dpr = window.devicePixelRatio || 1;
+  const r = cv.getBoundingClientRect();
+  if (r.width === 0) return null;
+  if (cv.width !== r.width*dpr || cv.height !== r.height*dpr){ cv.width = r.width*dpr; cv.height = r.height*dpr; }
+  const ctx = cv.getContext('2d');
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  return {ctx, w:r.width, h:r.height};
+}
+function proj(w,h){
+  const s = Math.min(w/1000, h/640) * 0.95;
+  const ox = (w-1000*s)/2, oy = (h-640*s)/2;
+  return ([x,y]) => [ox + x*s, oy + y*s];
+}
+function poly(ctx,P,pts,close){ ctx.beginPath(); pts.forEach((p,i)=>{const q=P(p); i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]);}); if(close)ctx.closePath(); }
+
+function routePts(){ if(!S.edited) return ROUTE;
+  const r = ROUTE.map(p=>p.slice()); r[ROUTE_EDITED_IDX]=ROUTE_EDITED_TO.slice(); return r; }
+function routeLen(pts){ let L=0; for(let i=1;i<pts.length;i++){L+=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);} return L; }
+function pointAt(pts,t){
+  const total=routeLen(pts); let d=t*total;
+  for(let i=1;i<pts.length;i++){
+    const seg=Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]);
+    if(d<=seg){const k=seg?d/seg:0; return [pts[i-1][0]+(pts[i][0]-pts[i-1][0])*k, pts[i-1][1]+(pts[i][1]-pts[i-1][1])*k];}
+    d-=seg;
+  } return pts[pts.length-1];
+}
+
+function drawBase(ctx,w,h,P){
+  ctx.fillStyle = '#0F161E'; ctx.fillRect(0,0,w,h);
+  ctx.strokeStyle = '#151F29'; ctx.lineWidth = 1;
+  for(let x=0;x<w;x+=44){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<h;y+=44){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+  // 区界
+  ctx.strokeStyle = '#22303D'; ctx.lineWidth = 1.5; ctx.setLineDash([7,5]);
+  poly(ctx,P,[[60,60],[510,30],[950,90],[960,560],[560,610],[70,570]],true); ctx.stroke(); ctx.setLineDash([]);
+  // 道路
+  ctx.strokeStyle = '#1B2733'; ctx.lineWidth = 3;
+  poly(ctx,P,[[0,330],[300,310],[620,360],[1000,320]]); ctx.stroke();
+  poly(ctx,P,[[500,0],[520,280],[480,640]]); ctx.stroke();
+  ctx.fillStyle = '#3A4B5C'; ctx.font = '11px '+getComputedStyle(document.body).getPropertyValue('--mono');
+  const lb=P([80,88]); ctx.fillText('光明区', lb[0], lb[1]);
+}
+function drawPlots(ctx,P,highlight){
+  const mono = getComputedStyle(document.body).getPropertyValue('--mono');
+  PLOTS.forEach(pl=>{
+    const hot = highlight && pl.covered;
+    ctx.fillStyle = hot ? 'rgba(62,198,184,.13)' : 'rgba(224,166,60,.14)';
+    ctx.strokeStyle = hot ? '#3EC6B8' : '#E0A63C';
+    ctx.lineWidth = hot ? 2 : 1.4;
+    poly(ctx,P,pl.pts,true); ctx.fill(); ctx.stroke();
+    const c = P(pl.pts[0]);
+    ctx.fillStyle = hot ? '#7FDFD5' : '#C9A050';
+    ctx.font = '11px '+mono;
+    ctx.fillText('图斑 '+pl.id, c[0], c[1]-7);
+  });
+}
+function drawDroneIcon(ctx,x,y,r,hot){
+  ctx.save(); ctx.translate(x,y);
+  ctx.strokeStyle = hot?'#3EC6B8':'#E8B44C'; ctx.fillStyle = hot?'#3EC6B8':'#E8B44C'; ctx.lineWidth=1.5;
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>{
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(a*r,b*r); ctx.stroke();
+    ctx.beginPath(); ctx.arc(a*r,b*r,r*0.42,0,7); ctx.stroke();
+  });
+  ctx.beginPath(); ctx.arc(0,0,r*0.5,0,7); ctx.fill();
+  ctx.restore();
+}
+function drawDrones(ctx,P,t){
+  const mono = getComputedStyle(document.body).getPropertyValue('--mono');
+  DRONES.forEach(d=>{
+    if(S.flying && d.id==='D-12') return;
+    const c = P([d.x,d.y]);
+    const pulse = RM ? 0.5 : (Math.sin(t/500)+1)/2;
+    ctx.beginPath(); ctx.arc(c[0],c[1],13+pulse*5,0,7);
+    ctx.strokeStyle = 'rgba(232,180,76,'+(0.35-pulse*0.2)+')'; ctx.lineWidth=1.5; ctx.stroke();
+    drawDroneIcon(ctx,c[0],c[1],7,false);
+    ctx.fillStyle = '#C7B183'; ctx.font='11px '+mono;
+    ctx.fillText(d.id+' · '+d.bat, c[0]+16, c[1]+4);
+  });
+}
+function drawRoute(ctx,P){
+  const pts = routePts();
+  ctx.strokeStyle = '#3EC6B8'; ctx.lineWidth = 2; ctx.setLineDash([9,6]);
+  ctx.lineDashOffset = -S.dash;
+  poly(ctx,P,pts); ctx.stroke(); ctx.setLineDash([]);
+  pts.forEach((p,i)=>{
+    const c=P(p); ctx.beginPath(); ctx.arc(c[0],c[1],3,0,7);
+    ctx.fillStyle = i===0||i===pts.length-1 ? '#fff' : '#3EC6B8'; ctx.fill();
+  });
+  const st=P(pts[0]);
+  ctx.fillStyle='#7FDFD5'; ctx.font='11px '+getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.fillText('起降点', st[0]+9, st[1]+13);
+}
+function drawFlight(ctx,P){
+  const pts = routePts();
+  if(S.flyT>0){ // 已飞过的实线
+    ctx.strokeStyle='#7FDFD5'; ctx.lineWidth=2.5; ctx.beginPath();
+    const N=80, upto=Math.floor(N*S.flyT);
+    for(let i=0;i<=upto;i++){ const q=P(pointAt(pts,i/N)); i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]); }
+    ctx.stroke();
+  }
+  const pos = P(pointAt(pts,S.flyT));
+  ctx.beginPath(); ctx.arc(pos[0],pos[1],16,0,7); ctx.strokeStyle='rgba(62,198,184,.4)'; ctx.stroke();
+  drawDroneIcon(ctx,pos[0],pos[1],8,true);
+  ctx.fillStyle='#7FDFD5'; ctx.font='11px '+getComputedStyle(document.body).getPropertyValue('--mono');
+  ctx.fillText('D-12 执行中 '+Math.round(S.flyT*100)+'%', pos[0]+18, pos[1]-8);
+}
+function drawEditorHandles(ctx,P){
+  routePts().forEach((p,i)=>{
+    const c=P(p);
+    ctx.fillStyle = i===ROUTE_EDITED_IDX ? '#E0A63C' : '#fff';
+    ctx.strokeStyle = '#3EC6B8'; ctx.lineWidth=1.5;
+    ctx.fillRect(c[0]-4,c[1]-4,8,8); ctx.strokeRect(c[0]-4,c[1]-4,8,8);
+  });
+  if(!S.edited){ // 原位置虚影
+    const c=P(ROUTE[ROUTE_EDITED_IDX]), c2=P(ROUTE_EDITED_TO);
+    ctx.setLineDash([3,3]); ctx.strokeStyle='rgba(224,166,60,.6)';
+    ctx.beginPath(); ctx.moveTo(c[0],c[1]); ctx.lineTo(c2[0],c2[1]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.strokeRect(c2[0]-4,c2[1]-4,8,8);
+  }
+}
+function render(t){
+  const map = fitCanvas($('mapCanvas'));
+  if(map){ const P=proj(map.w,map.h);
+    drawBase(map.ctx,map.w,map.h,P);
+    if(S.plots) drawPlots(map.ctx,P,S.highlight);
+    if(S.route) drawRoute(map.ctx,P);
+    if(S.drones) drawDrones(map.ctx,P,t);
+    if(S.flying) drawFlight(map.ctx,P);
+  }
+  if($('viewEditor').classList.contains('on')){
+    const ed = fitCanvas($('editCanvas'));
+    if(ed){ const P=proj(ed.w,ed.h);
+      drawBase(ed.ctx,ed.w,ed.h,P);
+      drawPlots(ed.ctx,P,true); drawRoute(ed.ctx,P); drawEditorHandles(ed.ctx,P);
+    }
+  }
+  if(!RM) S.dash = t/50;
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+
+/* ═══════════ 对话渲染 ═══════════ */
+const msgs = $('msgs');
+function scrollEnd(){ msgs.scrollTop = msgs.scrollHeight; }
+function addUser(t){ const d=document.createElement('div'); d.className='msg-u'; d.textContent=t; msgs.appendChild(d); scrollEnd(); }
+async function addAgent(t){
+  const d=document.createElement('div'); d.className='msg-a'; msgs.appendChild(d);
+  $('agentState').textContent='输出中'; $('agentState').classList.add('think');
+  if(RM){ d.textContent=t; scrollEnd(); }
+  else{ for(let i=0;i<=t.length;i+=2){ d.textContent=t.slice(0,i); scrollEnd(); await sleep(16);} d.textContent=t; }
+  $('agentState').textContent='待命'; $('agentState').classList.remove('think'); scrollEnd();
+}
+function newCot(){ const d=document.createElement('div'); d.className='cot'; msgs.appendChild(d); scrollEnd(); return d; }
+async function cotCall(box, tool, lbl, ret, ms){
+  const row=document.createElement('div'); row.className='cot-row';
+  row.innerHTML='<span class="tool">'+tool+'</span><span class="lbl">'+lbl+'</span><span class="st"><span class="spin"></span></span>';
+  box.appendChild(row); scrollEnd();
+  await sleep(ms||900);
+  row.querySelector('.st').innerHTML='<span class="ok-mark">✓</span>';
+  if(ret){ const r=document.createElement('div'); r.className='cot-ret'; r.innerHTML='↳ '+ret; box.appendChild(r); }
+  scrollEnd();
+}
+function addEvent(txt){ const d=document.createElement('div'); d.className='evt'; d.innerHTML='── <b>AG-UI</b> ▸ '+txt+' ──'; msgs.appendChild(d); scrollEnd(); }
+
+/* ═══════════ 视图切换 ═══════════ */
+function setView(name, tag, title, sub){
+  ['viewMap','viewEditor','viewReport'].forEach(v=>$(v).classList.toggle('on', v===name));
+  $('aguiTag').textContent = 'AG-UI ▸ ' + tag;
+  $('stageTitle').textContent = title;
+  $('stageSub').textContent = sub || '';
+}
+function toast(t){ const el=$('mapToast'); el.textContent=t; el.classList.add('on'); setTimeout(()=>el.classList.remove('on'), 2600); }
+function setTask(cls, txt){ const c=$('taskChip'); c.className='task '+cls; $('taskTxt').textContent=txt; }
+
+/* ═══════════ 飞前检查报告 ═══════════ */
+const CHECKS = [
+  {ico:'☀', name:'气象条件', tool:'check_weather',  detail:'晴 · 风速 <span class="mono">3.2 m/s</span> · 能见度 <span class="mono">10 km</span>，满足适飞标准', pill:'通过', cls:'ok'},
+  {ico:'▮', name:'电量续航', tool:'check_battery',  detail:'当前 <span class="mono">87%</span>，预计续航 <span class="mono">28 min</span> ≥ 任务时长 <span class="mono">20 min</span>', pill:'通过', cls:'ok'},
+  {ico:'⛰', name:'航线避障', tool:'check_route',    detail:'仿地飞行已开启 · 航线净空 <span class="mono">≥35 m</span>，已避开高压线走廊', pill:'通过', cls:'ok'},
+  {ico:'◎', name:'机载避障', tool:'check_obstacle', detail:'全向视觉避障系统在线，激光雷达自检正常', pill:'通过', cls:'ok'},
+  {ico:'▲', name:'空域许可', tool:'check_airspace', detail:'光明区临时空域许可有效至今日 <span class="mono">18:00</span>，注意 16:30 后有轻航器活动', pill:'注意', cls:'warn'},
+];
+function addReportRow(c){
+  const d=document.createElement('div'); d.className='r-item';
+  d.innerHTML='<div class="r-ico">'+c.ico+'</div><div class="r-main"><b>'+c.name+'</b><span>'+c.detail+'</span></div><span class="pill '+c.cls+'">'+c.pill+'</span>';
+  $('reportList').appendChild(d);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>d.classList.add('show')));
+}
+
+/* ═══════════ 确认卡片（人在环） ═══════════ */
+function addConfirmCard(){
+  return new Promise(res=>{
+    const d=document.createElement('div'); d.className='card';
+    d.innerHTML =
+      '<div class="card-head"><span class="warn-bar"></span>待确认 · 起飞指令 take_off</div>'+
+      '<div class="card-body">'+
+        '<div class="card-row"><span>执行无人机</span><span>D-12 · M350 RTK</span></div>'+
+        '<div class="card-row"><span>航线</span><span>R-0712 · 6.7 km</span></div>'+
+        '<div class="card-row"><span>覆盖图斑</span><span>GM-02 / 03 / 04</span></div>'+
+        '<div class="card-row"><span>预计时长</span><span>20 min</span></div>'+
+      '</div>'+
+      '<div class="card-acts"><button class="btn" id="cCancel">取消</button><button class="btn btn-go" id="cGo">确认起飞</button></div>'+
+      '<div class="card-note">高危操作需人工确认 · Agent 权限 ≤ 当前用户权限</div>';
+    msgs.appendChild(d); scrollEnd();
+    d.querySelector('#cGo').onclick = ()=>{ d.querySelector('#cGo').disabled=true; d.querySelector('#cCancel').disabled=true;
+      d.querySelector('#cGo').textContent='已确认'; res(true); };
+    d.querySelector('#cCancel').onclick = ()=>{ toastNote(d,'演示动线请点「确认起飞」'); };
+  });
+}
+function toastNote(card,txt){ const n=card.querySelector('.card-note'); n.textContent=txt; }
+
+/* ═══════════ 演示脚本 ═══════════ */
+const inBox=$('inBox'), sendBtn=$('sendBtn'), hintChip=$('hintChip');
+let stepIdx=0, running=false;
+
+const STEPS = [
+{ hint:'帮我查一下光明区最新的下发图斑',
+  async run(text){
+    const c=newCot();
+    await cotCall(c,'query_plots','图斑查询 { region: "光明区" }','命中 <em>5</em> 个图斑（本周下发批次 SZ-2607）',1000);
+    addEvent('show_map · 图斑落图');
+    S.plots=true; $('legend').hidden=false;
+    setView('viewMap','show_map','作业地图 · 光明区','plots: 5 features · GeoJSON');
+    toast('已加载 5 个图斑');
+    await addAgent('在光明区找到 5 个待核查图斑（GM-01 ~ GM-05），已在右侧地图标出。其中 GM-02、GM-03 为新增建设用地疑似变化，建议优先核查。');
+  }},
+{ hint:'调度一下这些图斑周边有哪些无人机',
+  async run(){
+    const c=newCot();
+    await cotCall(c,'find_nearby_drones','周边无人机查询 { radius_km: 5 }','<em>3</em> 架可用：D-07 / D-12 / D-21',1100);
+    addEvent('show_map · 无人机位置更新');
+    S.drones=true;
+    setView('viewMap','show_map','作业地图 · 光明区','plots: 5 · drones: 3');
+    toast('3 架可用无人机已标注');
+    await addAgent('周边 5 公里内有 3 架可用无人机。综合电量与距离，D-12（电量 87%，距 GM-04 约 1.8 km，挂载 L2 激光雷达）状态最优，建议由它执行本次核查任务。');
+  }},
+{ hint:'好，用 D-12 规划航线',
+  async run(){
+    const c=newCot();
+    await cotCall(c,'generate_route','航线生成 { drone: "D-12", strategy: "多图斑覆盖" }','航线 <em>R-0712</em> · 6.4 km · 预计 19 min',1400);
+    await cotCall(c,'explain_route','航线决策依据','覆盖图斑 <em>3</em> 个 · 同航向带合并',800);
+    addEvent('show_map · 航线渲染');
+    S.route=true; S.highlight=true;
+    setView('viewMap','show_map','作业地图 · 光明区','route: R-0712 · covers 3 plots');
+    toast('航线 R-0712 已生成');
+    await addAgent('航线 R-0712 已生成（右侧青色虚线）。说明一下规划逻辑：你本次只需核查 GM-04，但 GM-02、GM-03 恰好在同一航向带上，一条航线可以顺带覆盖——单架次核查 3 个图斑，航程 6.4 km，预计 19 分钟，比分三次起飞节省约 40 分钟。');
+  }},
+{ hint:'我手动调整一下航线',
+  async run(){
+    const c=newCot();
+    await cotCall(c,'open_route_editor','打开航线编辑 { routeId: "R-0712" }','免登录链接已生成 · token 有效期 10 min',900);
+    addEvent('show_iframe · 嵌入航线编辑界面');
+    setView('viewEditor','show_iframe','航线编辑 · R-0712（免登录嵌入）','iframe · postMessage 通道就绪');
+    await addAgent('已在右侧打开航线编辑界面（免登录嵌入，无需切系统）。调整航点后点击「完成编辑」，结果会自动回传给我。');
+    hintChip.hidden=true; inBox.placeholder='请在右侧编辑器中点击「完成编辑」…';
+    await new Promise(res=>{ $('editDone').onclick=()=>res(); });
+    S.edited=true;
+    addEvent('编辑结果回传 · postMessage → 前端 → Agent');
+    setView('viewMap','show_map','作业地图 · 光明区','route: R-0712 (rev.2) · 6.7 km');
+    toast('航线已更新至 rev.2');
+    await addAgent('收到你的调整：3 号航点西移约 120 m，避开了高压线走廊。航程 +0.3 km，预计时长更新为 20 分钟，续航余量仍然充足。');
+    inBox.placeholder='输入指令…';
+  }},
+{ hint:'我要起飞',
+  async run(){
+    await addAgent('起飞前先做安全检查：');
+    addEvent('show_report · 飞前检查');
+    setView('viewReport','show_report','飞前安全检查 · D-12','preflight_check · 5 项');
+    const c=newCot();
+    for(let i=0;i<CHECKS.length;i++){
+      const k=CHECKS[i];
+      await cotCall(c,k.tool,k.name,null,700);
+      addReportRow(k);
+    }
+    await addAgent('五项检查完成：四项通过，一项提示——空域许可 18:00 到期且 16:30 后有轻航器活动，当前时段起飞无冲突。整体满足起飞条件，请确认。');
+    const ok = await addConfirmCard();
+    if(!ok) return;
+    addEvent('human-in-the-loop ✓ · take_off 指令下发');
+    const c2=newCot();
+    await cotCall(c2,'take_off','起飞 { drone: "D-12", route: "R-0712" }','任务 T-8842 已创建 · MQTT 遥测订阅中',1200);
+    setView('viewMap','show_map','作业地图 · 光明区','task: T-8842 · telemetry 1 Hz');
+    setTask('run','任务 T-8842 执行中');
+    S.flying=true;
+    await addAgent('D-12 已起飞，正沿 R-0712 执行核查任务。我会全程监控遥测，异常（低电量 / 偏航 / 失联）会立即提醒你；任务完成后自动生成核查报告。');
+    // 飞行动画
+    const DUR = RM ? 800 : 16000, t0 = performance.now();
+    await new Promise(res=>{ (function tick(t){ S.flyT=Math.min(1,(t-t0)/DUR);
+      $('sbInfo').textContent='航速 8.0 m/s · 高度 120 m · 进度 '+Math.round(S.flyT*100)+'%';
+      S.flyT<1 ? requestAnimationFrame(tick) : res(); })(t0); });
+    S.flying=false; S.flyT=0; setTask('done','任务 T-8842 已完成');
+    $('sbInfo').textContent='比例尺 1:8000';
+    toast('任务完成 · 影像已入库');
+    await addAgent('任务完成：飞行 20 分 08 秒，采集影像 214 张、点云 1 组，已自动入库并关联 GM-02/03/04 三个图斑。核查报告草稿已生成，需要我读一下要点吗？\n\n—— 演示动线结束，点击右上角「重新演示」可重来。');
+  }},
+];
+
+function showHint(){
+  if(stepIdx < STEPS.length){ hintChip.textContent='💬 '+STEPS[stepIdx].hint; hintChip.hidden=false; }
+  else hintChip.hidden=true;
+}
+async function advance(text){
+  if(running || stepIdx>=STEPS.length) return;
+  running=true; sendBtn.disabled=true; hintChip.hidden=true; inBox.value='';
+  addUser(text);
+  $('aguiChip').classList.add('busy');
+  await STEPS[stepIdx].run(text);
+  $('aguiChip').classList.remove('busy');
+  stepIdx++; running=false; sendBtn.disabled=false; showHint();
+}
+sendBtn.onclick = ()=>{ const t=inBox.value.trim() || (stepIdx<STEPS.length?STEPS[stepIdx].hint:''); if(t) advance(t); };
+inBox.addEventListener('keydown', e=>{ if(e.key==='Enter') sendBtn.onclick(); });
+hintChip.onclick = ()=>advance(STEPS[stepIdx].hint);
+
+/* 开场 */
+(async ()=>{
+  await sleep(400);
+  await addAgent('你好，我是飞行作业助手。已接入 3 个业务能力服务（图斑 · 调度 · 航线），可以用一句话安排整个飞行核查流程。\n\n试试下面这句，或直接输入你的指令。');
+  showHint();
+})();
+</script>
