@@ -53,6 +53,11 @@ button { font-family: var(--sans); }
 .evt b { color: var(--accent); font-weight: 500; }
 
 .card { align-self: stretch; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+/* 待确认卡片高亮 */
+.card.card-pending { border-color: var(--warn); }
+/* 固定在输入框上方的待确认区：确认按钮永远可见可点，不受聊天滚动影响 */
+.pinned-confirm { flex-shrink: 0; padding: 8px 14px 0; border-top: 1px solid var(--line-soft); max-height: 42vh; overflow-y: auto; box-shadow: 0 -6px 16px rgba(0,0,0,.35); }
+.pinned-confirm .card { margin: 0; }
 .card-head { display: flex; align-items: center; gap: 8px; padding: 9px 14px; background: var(--panel3); font-weight: 600; font-size: 13px; }
 .card-head .warn-bar { width: 4px; height: 16px; border-radius: 1px; background: var(--warn); }
 .card-body { padding: 10px 14px; display: flex; flex-direction: column; gap: 5px; }

@@ -98,7 +98,7 @@ SSE 每行 `data: {json}`，类型：`RUN_STARTED/FINISHED/ERROR`、`TEXT_MESSAG
 | 航线详情 | `GET /drone/route/detail|points/{routeId}` | 版本/diff 本地管理 |
 | 航线编辑回写 | `PUT /drone/route`（更新 routePointList） | 编辑器保存后自动回写平台：按索引对位更新经纬度/高度，**保留平台侧拍照/云台动作**；航点数量变化时不回写（动作无法推断），仅本地版本并标记 `platform_synced=false` |
 | 气象 | **后端自查 Open-Meteo**（免费无 key）→ 平台气象接口 → 本地 mock 三级回落 | 以航线/图斑位置实时取风速/阵风/降水/温度并给适飞判定（风限 12 m/s）；`WEATHER_PROVIDER=mock` 可禁用出网（测试默认） |
-| 飞行任务 | `POST /api/tasks`（创建）· `PUT /api/tasks`（更新，按数字主键）· `PUT /api/tasks/cancel/{taskId}` | **只建不下发**：创建的任务是"待执行、未派发"状态，自动调度器只处理已派发任务，不会触发起飞（`start`/`sync` 才下发，本系统不调用）；创建默认关闭，`DRONE_CREATE_REAL_TASK=1` 开启；服务端创建耗时可达分钟级（同步做禁飞区/KMZ），客户端已放宽至 120s 超时 |
+| 飞行任务/起飞 | `POST /api/tasks`（创建）→ `POST /api/tasks/publish/{taskId}`（下发计划=真起飞）· `PUT /api/tasks`（更新）· `PUT /api/tasks/cancel/{taskId}` | **真实起飞 = 创建 flighttask + 下发计划(publish)**；仅创建不下发不会飞，下发(publish, immediate 模式)才把航线派到机场立即执行（`start`/`sync` 不是起飞入口）。两级安全开关默认全关（只本地模拟）：`DRONE_CREATE_REAL_TASK=1` 只建任务、`DRONE_REAL_PUBLISH=1` 才真下发起飞（需前者也开 + 现场审批）；服务端创建/下发耗时可达分钟级，超时放宽至 120s |
 
 无对应接口保留 mock：空域许可、航线净空分析；`dispatch_drone` 的"锁定"是 Agent 侧人在环概念，无需平台支持。测试/评测强制 mock（`tests/conftest.py`、`eval/run_eval.py`），不会打真实系统。
 

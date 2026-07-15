@@ -89,8 +89,9 @@ def take_off(drone_id: str, route_id: str, confirm_token: str | None = None) -> 
     task_id = STORE.next_id("T", 4)
     d["status"] = "flying"
 
-    # 真实模式：在平台创建飞行任务（只建不下发——平台自动调度器可能执行
-    # 待执行任务，故默认关闭，DRONE_CREATE_REAL_TASK=1 才开）
+    # 真实模式：起飞 = 创建 flighttask + 下发计划(publish)。分两级开关兜底安全：
+    #   DRONE_CREATE_REAL_TASK：在平台创建任务（只建不飞）
+    #   DRONE_REAL_PUBLISH：下发计划到机场执行（**真起飞**）——需前一开关也开
     platform_task = None
     real = get_real()
     _, rev = routes_core._rev(detail["route_id"])
@@ -98,11 +99,18 @@ def take_off(drone_id: str, route_id: str, confirm_token: str | None = None) -> 
         try:
             import uuid
 
+            ptid = uuid.uuid4().hex
             platform_task = real.create_flight_task(
-                uuid.uuid4().hex, f"低空智察Agent核查-{task_id}", rev["platform_route_id"], d["device_sn"]
+                ptid, f"低空智察Agent核查-{task_id}", rev["platform_route_id"], d["device_sn"]
             )
+            if config.DRONE_REAL_PUBLISH:
+                pub = real.publish_flight_task(ptid)
+                platform_task["published"] = pub
+                platform_task["real_takeoff"] = True
+            else:
+                platform_task["published"] = False
         except Exception as exc:  # noqa: BLE001
-            logger.warning("平台创建任务失败（本地任务继续）：%s", exc)
+            logger.warning("平台创建/下发任务失败（本地任务继续）：%s", exc)
 
     task = {
         "flight_task_id": task_id,
@@ -126,7 +134,11 @@ def take_off(drone_id: str, route_id: str, confirm_token: str | None = None) -> 
     }
     if platform_task:
         out["platform_task"] = platform_task
-        out["note"] = "已在管理平台创建任务（待执行，未直接下发）"
+        out["note"] = (
+            "已在管理平台创建任务并下发计划到机场执行（真实起飞）"
+            if platform_task.get("real_takeoff")
+            else "已在管理平台创建任务（待执行，未下发；开启 DRONE_REAL_PUBLISH 才会真下发起飞）"
+        )
     return out
 
 

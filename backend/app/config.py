@@ -26,6 +26,9 @@ CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1
 # ── 真实业务数据源（drone-manage，若依模块）─────────────────
 # 配置后业务工具优先走真实接口，未配置或调用失败回落 mock（L1 降级）
 DRONE_API_BASE = os.getenv("DRONE_API_BASE", "").strip().rstrip("/")
-# take_off 确认后是否真在平台创建飞行任务（平台自动调度器可能下发执行，默认关闭）
+# take_off 确认后是否在平台创建飞行任务（只建不下发，不会飞），默认关闭
 DRONE_CREATE_REAL_TASK = os.getenv("DRONE_CREATE_REAL_TASK", "0") == "1"
+# 是否真的下发计划到机场执行（= 真实起飞！immediate 模式立即飞），默认关闭；
+# 开启需 DRONE_CREATE_REAL_TASK 也开，并确认现场安全与审批
+DRONE_REAL_PUBLISH = os.getenv("DRONE_REAL_PUBLISH", "0") == "1"
 DRONE_WORKSPACE_ID = os.getenv("DRONE_WORKSPACE_ID", "drone")

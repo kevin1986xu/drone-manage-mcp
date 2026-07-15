@@ -39,7 +39,7 @@ function ConfirmCard({ item }: { item: Extract<ChatItem, { kind: 'confirm' }> })
     }
   }
   return (
-    <div className="card">
+    <div className={`card${state === 'pending' ? ' card-pending' : ''}`}>
       <div className="card-head">
         <span className="warn-bar" />
         待确认 · {payload.summary.title}
@@ -109,6 +109,11 @@ export function Chat() {
   const [input, setInput] = useState('')
   const endRef = useRef<HTMLDivElement>(null)
 
+  // 待确认卡片从滚动流里抽出、固定钉在输入框上方，保证确认按钮永远可见可点
+  const pendingConfirm = items.find(
+    (it): it is Extract<ChatItem, { kind: 'confirm' }> => it.kind === 'confirm' && it.state === 'pending',
+  )
+
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [items])
@@ -128,11 +133,17 @@ export function Chat() {
         <span className={`agent-state${busy ? ' think' : ''}`}>{busy ? '思考中' : '待命'}</span>
       </div>
       <div className="msgs">
-        {items.map((it) => (
-          <Item key={it.id} item={it} />
-        ))}
+        {items.map((it) =>
+          // 待确认卡片不在流内渲染（改为下方固定区），避免被后续内容顶出可视区
+          it === pendingConfirm ? null : <Item key={it.id} item={it} />,
+        )}
         <div ref={endRef} />
       </div>
+      {pendingConfirm && (
+        <div className="pinned-confirm">
+          <Item item={pendingConfirm} />
+        </div>
+      )}
       <div className="composer">
         {hint && !busy && (
           <button className="hint-chip" onClick={() => submit(hint)}>

@@ -247,11 +247,15 @@ class DroneManageClient:
         self._call("PUT", "/drone/route", json={"routeId": platform_route_id, "routePointList": raw_pts})
         return True
 
-    # ── 飞行任务（创建/更新/取消；不 start/sync 下发）────────
+    # ── 飞行任务（创建 → 下发）────────────────────────────────
+    # 真实起飞流程 = 创建 flighttask + 下发计划(publish)。仅创建不下发不会飞；
+    # 下发（POST /api/tasks/publish/{taskId}）才把航线派到机场执行（immediate 模式
+    # 立即起飞）。start/sync 不是起飞入口，不用。
 
-    def create_flight_task(self, task_id: str, task_name: str, platform_route_id: str, device_sn: str) -> dict[str, Any]:
-        """POST /api/tasks 创建任务（taskStatus=待执行、未派发——自动调度器
-        只处理已派发任务，创建本身不会触发起飞；下发须另调 start/sync，本系统不调用）。"""
+    def create_flight_task(
+        self, task_id: str, task_name: str, platform_route_id: str, device_sn: str, execution_mode: str = "immediate"
+    ) -> dict[str, Any]:
+        """POST /api/tasks 创建飞行任务（此步只建、不飞）。"""
         # 服务端创建时同步做禁飞区文件/KMZ 等重活，响应可达分钟级，单独放宽超时
         self._call(
             "POST", "/api/tasks",
@@ -262,12 +266,19 @@ class DroneManageClient:
                 "deviceSn": device_sn,
                 "workspaceId": config.DRONE_WORKSPACE_ID,
                 "taskType": "PLOT_INSPECTION",
-                "description": "低空智察智能体创建（人在环确认后，仅创建未下发）",
+                "executionMode": execution_mode,
+                "description": "低空智察智能体创建（人在环确认后）",
             },
             timeout=120,
         )
         created = self.get_flight_task(task_id)
         return {"taskId": task_id, "status": created.get("status"), "taskName": created.get("taskName")}
+
+    def publish_flight_task(self, task_id: str) -> dict[str, Any]:
+        """POST /api/tasks/publish/{taskId} 下发计划到机场执行（**真实起飞**，
+        immediate 模式立即飞）。返回 {success, missionId/message}。"""
+        body = self._call("POST", f"/api/tasks/publish/{task_id}", timeout=120)
+        return body.get("data") or {}
 
     def get_flight_task(self, task_id: str) -> dict[str, Any]:
         body = self._call("GET", f"/api/tasks/{task_id}")
