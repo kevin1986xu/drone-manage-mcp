@@ -10,3 +10,4 @@ package-lock.json
 .idea/
 *.log
 scratchpad/
+.gstack/

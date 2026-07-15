@@ -148,6 +148,7 @@ def generate_route(
 ) -> dict[str, Any]:
     from app.core import drones as drones_core
 
+    drones_core._hydrate_from_real()  # 确保真实模式下设备与图斑数据源一致
     drone = drones_core._find(drone_id)
     if not drone:
         return {"error": f"无人机 {drone_id} 不存在"}

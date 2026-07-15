@@ -63,7 +63,16 @@ class _Emitter:
 
 
 def _extract_plot_ids(text: str) -> list[str]:
-    return [f"GM-{int(n):02d}" for n in re.findall(r"GM-?\s?(\d{1,2})", text, re.I)]
+    """从话术提取图斑编号：mock 的 GM-xx，以及真实图斑（按数字/编号片段匹配
+    STORE 里的真实 zoneName，如"20260525-00005""00005"命中"汉川市-变更调查-20260525-00005"）。"""
+    ids = [f"GM-{int(n):02d}" for n in re.findall(r"GM-?\s?(\d{1,2})", text, re.I)]
+    # 真实图斑：提取话术里的编号片段（日期-序号 / 纯序号 / UUID 片段）匹配 STORE 键
+    tokens = re.findall(r"\d{4,}(?:-\d+)?|[0-9a-f]{6,}", text, re.I)
+    for tok in tokens:
+        for key in STORE.plots:
+            if tok.upper() in key.upper() and key not in ids:
+                ids.append(key)
+    return ids
 
 
 def _extract_drone(text: str) -> str | None:
@@ -322,13 +331,21 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         or ("规划" in msg and ("图斑" in msg or _extract_plot_ids(msg)))
         or lower.strip() in {"规划航线", "生成航线"}
     ):
-        drone_id = _extract_drone(msg) or ctx.get("drone_id") or "D-12"
         plot_ids = _extract_plot_ids(msg)
         if not plot_ids:
             # 默认给最高优先级的重点图斑规划，multi_cover 会自动合并同航向带图斑
-            plots = ctx.get("plots") or T.query_plots.func(region="光明区")["plots"]
+            plots = ctx.get("plots") or T.query_plots.func()["plots"]
             focus = [p for p in plots if "重点" in p["plot_type"]] or [p for p in plots if p["priority"] == "高"] or plots
             plot_ids = [focus[0]["plot_id"]]
+        # 无人机：话术指定 > 上文已选 > 就近自动选一架真实空闲机（不硬编码 mock 机）
+        drone_id = _extract_drone(msg) or ctx.get("drone_id")
+        if not drone_id:
+            nd = T.find_nearby_drones.func(plot_id=plot_ids[0], radius_km=1000)
+            idle = [d for d in nd["drones"] if d["status"] == "idle"] or nd["drones"]
+            drone_id = idle[0]["drone_id"] if idle else None
+            if not drone_id:
+                await em.say("附近没有可用无人机，无法规划航线。请先扩大范围查设备。")
+                return
         ctx["drone_id"] = drone_id
         # "每个图斑拍 N 张 / 拍 N 个点" → photo_num（整条航线统一）
         pm = re.search(r"(?:拍摄?|拍照)?\s*(\d+)\s*(?:张|个点|个拍照点)", msg)
