@@ -66,12 +66,16 @@ def _extract_plot_ids(text: str) -> list[str]:
     """从话术提取图斑编号：mock 的 GM-xx，以及真实图斑（按数字/编号片段匹配
     STORE 里的真实 zoneName，如"20260525-00005""00005"命中"汉川市-变更调查-20260525-00005"）。"""
     ids = [f"GM-{int(n):02d}" for n in re.findall(r"GM-?\s?(\d{1,2})", text, re.I)]
-    # 真实图斑：提取话术里的编号片段（日期-序号 / 纯序号 / UUID 片段）匹配 STORE 键
+    # 真实图斑：提取话术里的编号片段（日期-序号 / 纯序号 / UUID 片段）
     tokens = re.findall(r"\d{4,}(?:-\d+)?|[0-9a-f]{6,}", text, re.I)
     for tok in tokens:
-        for key in STORE.plots:
-            if tok.upper() in key.upper() and key not in ids:
-                ids.append(key)
+        matched = [k for k in STORE.plots if tok.upper() in k.upper()]
+        if matched:
+            ids += [k for k in matched if k not in ids]
+        elif tok not in ids:
+            # STORE 尚未灌入真实数据（首次查询前）时保留原始编号，
+            # 交给下游 query_plots（先灌数据再子串过滤）与 _resolve_pid 解析
+            ids.append(tok)
     return ids
 
 
@@ -376,11 +380,13 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         )
         return
 
-    # 软约束调参：对已有航线提参数化优化诉求（飞低/多拍/精度/只飞这块）→ 重规划替换
-    _tune_kw = ("飞低", "飞高", "降低", "提高", "高度", "拍", "重叠", "精度", "清晰", "只飞", "单独这块", "不顺带")
+    # 软约束调参 / 合并周边：对已有航线提参数化优化诉求 → 重规划替换
+    _tune_kw = ("飞低", "飞高", "降低", "提高", "高度", "拍", "重叠", "精度", "清晰",
+                "只飞", "单独这块", "不顺带", "合并", "顺带", "一起", "周边", "附近")
     if ctx.get("route_id") and any(k in msg for k in _tune_kw) and not any(
         k in msg for k in ("手动", "编辑器", "我自己", "挪", "拖")
     ):
+        merge_intent = any(k in msg for k in ("合并", "顺带", "一起", "周边", "附近"))
         args: dict[str, Any] = {
             "drone_id": ctx.get("drone_id") or "D-12",
             "plot_ids": ctx.get("route_plot_ids") or [c["plot_id"] for c in T.get_route_detail.func(route_id=ctx["route_id"])["covered_plots"]],
@@ -407,6 +413,8 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         chg = r.get("change_vs_previous") or {}
         fb = r.get("feasibility") or {}
         parts = []
+        if merge_intent or "covered_plots" in chg:
+            parts.append(f"覆盖图斑 {chg.get('covered_plots', len(r['covered_plots']))} 个（已顺带合并周边）")
         if "altitude_m" in args:
             parts.append(f"高度 {chg.get('altitude_m', args['altitude_m'])} m")
         if "photo_num" in args:

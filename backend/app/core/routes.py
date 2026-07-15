@@ -19,7 +19,8 @@ from app.datasource import get_real
 
 logger = logging.getLogger(__name__)
 
-CRUISE_MS = 8.0           # 巡航速度 m/s
+CRUISE_MS = 8.0           # 巡航/拍摄速度 m/s（图斑内环绕拍摄）
+FERRY_MS = 15.0           # 转场速度 m/s（机场↔作业区往返，明显快于拍摄速度）
 SORTIE_OVERHEAD_MIN = 8.0  # 单独起降一次的固定开销（转场/起降/换电）
 RESERVE_RATIO = 0.15       # 续航预留
 EDITOR_TOKEN_TTL_S = 600
@@ -70,7 +71,9 @@ def _nn_order(start: list[float], infos: list[dict[str, Any]]) -> list[dict[str,
 
 
 def _duration_min(tour_km: float, infos: list[dict[str, Any]]) -> float:
-    return tour_km * 1000 / CRUISE_MS / 60 + sum(_survey_min(p["area_mu"]) for p in infos)
+    # 转场航程用转场速度估时（往返机场是主要里程），拍摄时长按图斑面积单列。
+    # 邻近图斑集群顺带覆盖时，转场里程几乎不增、仅多几分钟拍摄，从而不被误判超续航。
+    return tour_km * 1000 / FERRY_MS / 60 + sum(_survey_min(p["area_mu"]) for p in infos)
 
 
 def _insertion_cost_km(start: list[float], order: list[dict[str, Any]], cand: dict[str, Any]) -> tuple[float, int]:
@@ -257,9 +260,9 @@ def generate_route(
         for p in order
     ]
 
-    # 对比基线：每个覆盖图斑单独起飞一个架次
+    # 对比基线：每个覆盖图斑单独起飞一个架次（往返转场用转场速度）
     separate_total_min = sum(
-        2 * geo.dist_m(start, p["centroid"]) / 1000 * 1000 / CRUISE_MS / 60
+        2 * geo.dist_m(start, p["centroid"]) / 1000 * 1000 / FERRY_MS / 60
         + _survey_min(p["area_mu"])
         + SORTIE_OVERHEAD_MIN
         for p in order
