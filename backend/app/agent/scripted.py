@@ -509,7 +509,7 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         r = await em.call_tool(T.get_route_detail, {"route_id": ctx["route_id"]}, 0.5)
         await em.say(
             f"{r['route_id']}（rev.{r['version']}，{r['source']}）：航程 {r['length_km']} km，"
-            f"预计 {r['duration_min']} 分钟，{len(r['waypoints'])} 个航点，"
+            f"预计 {r['duration_min']} 分钟，{r.get('waypoint_count', '—')} 个航点，"
             f"覆盖图斑 {'、'.join(c['plot_id'] for c in r['covered_plots'])}，已在右侧地图显示。"
         )
         return

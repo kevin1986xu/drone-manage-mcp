@@ -7,6 +7,7 @@ import pytest
 
 from app.agent.tools import ALL_TOOLS
 from app.core import confirm
+from app.core import routes as routes_core
 from app.core.store import STORE
 
 
@@ -50,24 +51,41 @@ def test_tool_rejects_bad_args():
     with pytest.raises(Exception):
         _tool("get_drone_status").invoke({})  # 缺必填参数
     with pytest.raises(Exception):
-        _tool("generate_route").invoke({"drone_id": "D-12", "plot_ids": "GM-04"})  # 类型错误：应为数组
+        _tool("generate_route").invoke({"plot_ids": ["GM-04"]})  # 缺必填 drone_id
+
+
+def test_tool_accepts_stringified_list():
+    # 模型偶发把数组参数传成字符串（qwen 常见）；工具边界应归一化而非报错重试
+    r = _tool("query_plots").invoke({"plot_ids": '["GM-03"]'})  # JSON 字符串形式
+    assert r["count"] == 1
+    r2 = _tool("query_plots").invoke({"plot_ids": "GM-03"})  # 裸串形式
+    assert r2["count"] == 1
 
 
 # ── drone-dispatch 域 ────────────────────────────────────────
 
 
 def test_query_plots_contract():
+    # LLM 工具层：瘦身返回（无 geometry，省 token），保留推理必需字段
     r = _tool("query_plots").func(region="光明区")
     assert r["count"] == 5 and r["batch_no"] == "SZ-2607"
     p = r["plots"][0]
-    for key in ("plot_id", "plot_type", "priority", "area_mu", "geometry", "issued_at", "centroid"):
+    for key in ("plot_id", "plot_type", "priority", "area_mu", "issued_at", "centroid"):
         assert key in p
-    assert p["geometry"]["type"] == "Polygon"
-    ring = p["geometry"]["coordinates"][0]
-    assert ring[0] == ring[-1], "GeoJSON 外环必须闭合"
+    assert "geometry" not in p, "LLM 层应剔除大体积 geometry"
     # 过滤参数
     assert _tool("query_plots").func(plot_ids=["GM-03"])["count"] == 1
     assert _tool("query_plots").func(region="南山区")["count"] == 0
+
+
+def test_query_plots_core_has_geometry():
+    # 业务原子层/前端数据源：保留完整 GeoJSON 边界
+    from app.core import plots as plots_core
+
+    p = plots_core.query_plots(region="光明区")["plots"][0]
+    assert p["geometry"]["type"] == "Polygon"
+    ring = p["geometry"]["coordinates"][0]
+    assert ring[0] == ring[-1], "GeoJSON 外环必须闭合"
 
 
 def test_find_nearby_drones_contract():
@@ -95,10 +113,13 @@ def test_generate_route_multi_cover_merges_same_heading_band():
     covered = {c["plot_id"] for c in r["covered_plots"]}
     assert "GM-04" in covered
     assert len(covered) >= 2, "multi_cover 应合并同航向带图斑"
-    assert r["geometry"]["type"] == "LineString"
+    assert "geometry" not in r and "waypoints" not in r, "LLM 层应剔除航点/几何"
     assert r["length_km"] > 0 and r["duration_min"] > 0
     # 时长必须在续航预算内（含预留）
     assert r["duration_min"] <= 28 * 0.87
+    # 完整几何在业务原子层可取
+    detail = routes_core.get_route_detail(r["route_id"])
+    assert detail["geometry"]["type"] == "LineString" and len(detail["waypoints"]) > 0
 
 
 def test_generate_route_single_strategy():
@@ -128,9 +149,8 @@ def test_get_route_detail_diff_after_edit():
     rid = route["route_id"]
     ed = _tool("open_route_editor").func(route_id=rid)
     token = ed["url"].split("token=")[1]
-    from app.core import routes as routes_core
-
-    wps = [{"lon": w["lon"], "lat": w["lat"]} for w in route["waypoints"]]
+    # 航点从业务原子层取（LLM 工具层已瘦身、无 waypoints）
+    wps = [{"lon": w["lon"], "lat": w["lat"]} for w in routes_core.get_route_detail(rid)["waypoints"]]
     wps[2] = {"lon": wps[2]["lon"] - 0.0012, "lat": wps[2]["lat"]}  # 3 号航点西移约 120m
     assert routes_core.validate_editor_token(rid, token)
     updated = routes_core.update_waypoints(rid, wps)

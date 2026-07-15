@@ -84,12 +84,25 @@ def directives_for(tool_name: str, result: Any) -> list[dict[str, Any]]:
         return [view_directive("show_plan", {"schedule": result.get("schedule", []), "plan_id": result.get("plan_id"), "active": True})]
 
     if tool_name == "query_plots":
-        return [view_directive("show_map", {"layer": "plots", "plots": result.get("plots", [])})]
+        # 给 LLM 的 result 已瘦身（无 geometry）；前端画图所需几何从 STORE 补齐
+        from app.core.store import STORE
+
+        plots = []
+        for p in result.get("plots", []):
+            full = STORE.plots.get(p.get("plot_id"))
+            plots.append({**p, "geometry": full["geometry"]} if full and full.get("geometry") else p)
+        return [view_directive("show_map", {"layer": "plots", "plots": plots})]
 
     if tool_name == "find_nearby_drones":
         return [view_directive("show_map", {"layer": "drones", "drones": result.get("drones", [])})]
 
     if tool_name in {"generate_route", "get_route_detail"}:
+        from app.core import routes as routes_core
+
+        _, rev = routes_core._rev(result["route_id"])
+        geometry = result.get("geometry")
+        if not geometry and rev:  # LLM 瘦身返回无几何，从 STORE 航点重建
+            geometry = {"type": "LineString", "coordinates": [[w["lon"], w["lat"]] for w in rev["waypoints"]]}
         return [
             view_directive(
                 "show_map",
@@ -97,10 +110,10 @@ def directives_for(tool_name: str, result: Any) -> list[dict[str, Any]]:
                     "layer": "route",
                     "route": {
                         "route_id": result["route_id"],
-                        "version": result["version"],
+                        "version": result.get("version", rev["version"] if rev else 1),
                         "length_km": result["length_km"],
                         "duration_min": result["duration_min"],
-                        "geometry": result["geometry"],
+                        "geometry": geometry,
                         "covered_plots": result["covered_plots"],
                     },
                 },

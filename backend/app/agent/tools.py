@@ -9,9 +9,32 @@ tool 的 name/description 是 Agent 命中率的第一杠杆，按
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from langchain_core.tools import tool
+
+
+def _as_list(v: Any) -> Any:
+    """把模型偶发的"字符串化列表"强制还原为列表。
+
+    qwen 等模型有时把数组参数传成 JSON 字符串（plot_ids='["0005"]'）甚至裸串
+    （plot_ids='0005'），若不还原，下游 `for i in plot_ids` 会按字符遍历导致
+    子串误匹配、Agent 反复重试。这里统一在工具边界归一化。
+    """
+    if v is None or isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        s = v.strip()
+        if s.startswith("["):
+            try:
+                parsed = json.loads(s)
+                if isinstance(parsed, list):
+                    return [str(x) for x in parsed]
+            except (json.JSONDecodeError, ValueError):
+                pass
+        return [v]  # 裸串当作单个编号
+    return v
 
 from app.core import batch as batch_core
 from app.core import drones as drones_core
@@ -20,15 +43,36 @@ from app.core import preflight as preflight_core
 from app.core import routes as routes_core
 from app.core import tasks as tasks_core
 
+
+def _lean_plots(result: dict[str, Any]) -> dict[str, Any]:
+    """给 LLM 的图斑结果剔除大体积 geometry（占 ~86% token，几何前端另从 STORE 取），
+    保留编号/类型/优先级/面积/中心等推理必需字段，避免多次查询撑爆上下文。"""
+    if not isinstance(result, dict) or "plots" not in result:
+        return result
+    lean = dict(result)
+    lean["plots"] = [{k: v for k, v in p.items() if k != "geometry"} for p in result["plots"]]
+    return lean
+
+
+def _lean_route(result: dict[str, Any]) -> dict[str, Any]:
+    """给 LLM 的航线结果剔除 waypoints/geometry（几十个航点坐标），保留统计与决策字段；
+    航点数量以标量 waypoint_count 保留（供复述用，不占 token）。"""
+    if not isinstance(result, dict) or result.get("error"):
+        return result
+    lean = {k: v for k, v in result.items() if k not in ("waypoints", "geometry")}
+    if isinstance(result.get("waypoints"), list):
+        lean["waypoint_count"] = len(result["waypoints"])
+    return lean
+
 # ── drone-dispatch（调度域）──────────────────────────────────
 
 
 @tool
 def query_plots(
     region: str | None = None,
-    plot_ids: list[str] | None = None,
+    plot_ids: list[str] | str | None = None,
     plot_type: str | None = None,
-    date_range: list[str] | None = None,
+    date_range: list[str] | str | None = None,
     batch_no: str | None = None,
 ) -> dict[str, Any]:
     """查询自然资源核查图斑（下发的疑似变化地块）。
@@ -37,9 +81,11 @@ def query_plots(
     所有参数均可选：region 为行政区名（如"光明区"）；plot_ids 为图斑编号列表
     （如 ["GM-03"]）；plot_type 为疑似变化类型关键词；date_range 为
     ["YYYY-MM-DD","YYYY-MM-DD"]；batch_no 为下发批次号。
-    返回图斑列表：编号、类型、面积（亩）、优先级、GeoJSON 边界、下发时间。
+    返回图斑列表：编号、类型、面积（亩）、优先级、中心坐标、下发时间（几何边界已在地图显示，无需返回给你）。
     """
-    return plots_core.query_plots(region, plot_ids, plot_type, date_range, batch_no)
+    return _lean_plots(
+        plots_core.query_plots(region, _as_list(plot_ids), plot_type, _as_list(date_range), batch_no)
+    )
 
 
 @tool
@@ -77,7 +123,7 @@ def get_drone_status(drone_id: str) -> dict[str, Any]:
 def dispatch_drone(
     drone_id: str,
     task_type: str,
-    plot_ids: list[str],
+    plot_ids: list[str] | str,
     confirm_token: str | None = None,
 ) -> dict[str, Any]:
     """【高危·需人工确认】锁定一架无人机执行核查任务。
@@ -87,7 +133,7 @@ def dispatch_drone(
     后续指令，此时携带 token 再次调用才会真正锁定。
     task_type 如"图斑核查"。plot_ids 为本次任务关联的图斑编号。
     """
-    return tasks_core.dispatch_drone(drone_id, task_type, plot_ids, confirm_token)
+    return tasks_core.dispatch_drone(drone_id, task_type, _as_list(plot_ids), confirm_token)
 
 
 # ── route-planning（航线域）──────────────────────────────────
@@ -96,7 +142,7 @@ def dispatch_drone(
 @tool
 def generate_route(
     drone_id: str,
-    plot_ids: list[str],
+    plot_ids: list[str] | str,
     strategy: str = "multi_cover",
     altitude_m: float = 120.0,
     overlap_rate: float = 0.7,
@@ -128,9 +174,9 @@ def generate_route(
     返回 route_id、航程、时长、覆盖图斑、feasibility、change_vs_previous。
     首次规划成功后建议立即调用 explain_route 主动解释规划逻辑。
     """
-    return routes_core.generate_route(
-        drone_id, plot_ids, strategy, altitude_m, overlap_rate, photo_num, replace_route_id
-    )
+    return _lean_route(routes_core.generate_route(
+        drone_id, _as_list(plot_ids), strategy, altitude_m, overlap_rate, photo_num, replace_route_id
+    ))
 
 
 @tool
@@ -142,7 +188,7 @@ def get_route_detail(route_id: str, version: int | None = None) -> dict[str, Any
     航线可能已被人工编辑更新，禁止引用对话历史里的旧数据。
     编辑器回传（[EDITOR_SAVED]）后也用本工具，并根据 diff_vs_prev 复述变更影响。
     """
-    return routes_core.get_route_detail(route_id, version)
+    return _lean_route(routes_core.get_route_detail(route_id, version))
 
 
 @tool
@@ -237,7 +283,7 @@ def take_off(drone_id: str, route_id: str, confirm_token: str | None = None) -> 
 
 @tool
 def create_task_plan(
-    plot_ids: list[str],
+    plot_ids: list[str] | str,
     deadline_days: int = 5,
     max_sorties_per_day: int = 3,
     priority_first: bool = True,
@@ -253,7 +299,7 @@ def create_task_plan(
     后续天次保持排期待执行。返回 schedule（逐日架次表）供你向用户复述。
     """
     return batch_core.create_task_plan(
-        plot_ids, deadline_days, max_sorties_per_day, priority_first, confirm_token
+        _as_list(plot_ids), deadline_days, max_sorties_per_day, priority_first, confirm_token
     )
 
 
