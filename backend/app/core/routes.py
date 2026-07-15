@@ -149,9 +149,10 @@ def generate_route(
     photo_num: int = 4,
     replace_route_id: str | None = None,
 ) -> dict[str, Any]:
-    from app.core import drones as drones_core
+    from app.core import drones as drones_core, plots as plots_core
 
-    drones_core._hydrate_from_real()  # 确保真实模式下设备与图斑数据源一致
+    plots_core._hydrate_from_real()   # 确保图斑为真实数据（可能未经 query_plots 直接规划）
+    drones_core._hydrate_from_real()  # 确保设备与图斑数据源一致
     drone = drones_core._find(drone_id)
     if not drone:
         return {"error": f"无人机 {drone_id} 不存在"}

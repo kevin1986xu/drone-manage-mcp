@@ -84,6 +84,25 @@ def _extract_drone(text: str) -> str | None:
     return f"D-{int(m.group(1)):02d}" if m else None
 
 
+_DRONE_COMMON = {"汉川", "应城", "人民", "政府", "委员", "村委", "机巢", "机场", "无人", "人机", "指挥", "中心"}
+
+
+def _match_drone(text: str) -> str | None:
+    """从话术匹配无人机：mock 的 D-xx，或真实机场名（"庙头镇"命中"汉川市庙头镇人民政府"）。"""
+    d = _extract_drone(text)
+    if d:
+        return d
+    # 机场名里的 2~4 字窗口若出现在话术中即命中（排除通用词，避免"汉川市"误配全部）
+    for did in STORE.drones:
+        name = did.replace("汉川市", "").replace("应城", "")
+        for n in range(min(4, len(name)), 1, -1):
+            for i in range(len(name) - n + 1):
+                w = name[i : i + n]
+                if w not in _DRONE_COMMON and w in text:
+                    return did
+    return None
+
+
 _DISTRICTS = ["光明", "南山", "宝安", "龙华", "福田", "罗湖", "龙岗", "盐田", "坪山", "大鹏"]
 
 
@@ -278,6 +297,38 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         )
         return
 
+    # 用户点名/选定某台无人机（"用庙头镇的""我觉得庙头镇最合适""换成 D-12"）
+    if (
+        _match_drone(msg)
+        and any(k in msg for k in ("用", "选", "换", "就", "合适", "最好", "指定", "让"))
+        and not any(k in msg for k in ("规划", "生成", "起飞", "检查"))
+    ):
+        chosen = _match_drone(msg)
+        d = await em.call_tool(T.get_drone_status, {"drone_id": chosen}, 0.5)
+        if d.get("error"):
+            await em.say(d["error"])
+            return
+        ctx["drone_id"] = d["drone_id"]
+        # 若已有航线，用新选的无人机重规划（航线起点/续航随之改变）
+        if ctx.get("route_id") and ctx.get("route_plot_ids"):
+            r = await em.call_tool(
+                T.generate_route,
+                {"drone_id": d["drone_id"], "plot_ids": ctx["route_plot_ids"],
+                 "strategy": "multi_cover", "replace_route_id": ctx["route_id"]},
+                1.2,
+            )
+            if not r.get("error"):
+                ctx["route_id"] = r["route_id"]
+                fb = r.get("feasibility") or {}
+                await em.say(
+                    f"好的，改用 {d['drone_id']} 执行，已按它重新规划航线（{r['route_id']}）："
+                    f"覆盖 {len(r['covered_plots'])} 个图斑，航程 {r['length_km']} km、预计 {r['duration_min']} 分钟，"
+                    f"续航余量 {fb.get('margin_min','—')} 分钟。"
+                )
+                return
+        await em.say(f"好的，本次核查改用 {d['drone_id']}（{d['status_cn']}，挂载{d['payload']}）。可以说\"规划航线\"用它规划。")
+        return
+
     if any(k in msg for k in ("无人机", "调度", "飞机")) and not any(k in msg for k in ("起飞", "航线")):
         r = await em.call_tool(T.find_nearby_drones, {"radius_km": 5.0}, 0.9)
         if not r["drones"]:
@@ -335,14 +386,18 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         or ("规划" in msg and ("图斑" in msg or _extract_plot_ids(msg)))
         or lower.strip() in {"规划航线", "生成航线"}
     ):
+        explicit_plot = bool(_extract_plot_ids(msg))
         plot_ids = _extract_plot_ids(msg)
         if not plot_ids:
             # 默认给最高优先级的重点图斑规划，multi_cover 会自动合并同航向带图斑
             plots = ctx.get("plots") or T.query_plots.func()["plots"]
             focus = [p for p in plots if "重点" in p["plot_type"]] or [p for p in plots if p["priority"] == "高"] or plots
             plot_ids = [focus[0]["plot_id"]]
-        # 无人机：话术指定 > 上文已选 > 就近自动选一架真实空闲机（不硬编码 mock 机）
-        drone_id = _extract_drone(msg) or ctx.get("drone_id")
+        # 无人机选择：话术点名 > （本次显式指定了图斑则就近重选，不复用过期选择）
+        # > 上文已选 > 就近自动选一架真实空闲机
+        drone_id = _match_drone(msg)
+        if not drone_id and not explicit_plot:
+            drone_id = ctx.get("drone_id")
         if not drone_id:
             nd = T.find_nearby_drones.func(plot_id=plot_ids[0], radius_km=1000)
             idle = [d for d in nd["drones"] if d["status"] == "idle"] or nd["drones"]
@@ -361,13 +416,15 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
             await em.say(f"航线生成失败：{r['error']}")
             return
         ctx["route_id"] = r["route_id"]
-        ctx["route_plot_ids"] = plot_ids  # 原始核查目标，供后续软约束重规划保持范围
+        # 用解析后的真实图斑编号作为"核查目标"（plot_ids 可能是 0005 这样的原始 token）
+        requested = [c["plot_id"] for c in r["covered_plots"] if c.get("requested")] or plot_ids
+        ctx["route_plot_ids"] = requested  # 原始核查目标，供后续软约束重规划保持范围
         ex = await em.call_tool(T.explain_route, {"route_id": r["route_id"]}, 0.6)
         d = ex["decision"]
         merged = [m["plot_id"] for m in d["merged_candidates"]]
         bc = d["baseline_comparison"]
         explain = (
-            f"说明一下规划逻辑：你本次只需核查 {'、'.join(plot_ids)}，"
+            f"说明一下规划逻辑：你本次只需核查 {'、'.join(requested)}，"
             f"但 {'、'.join(merged)} 恰好在同一航向带上，顺带覆盖的增量航程小于单独起飞的往返航程，"
             f"因此一条航线覆盖 {len(d['covered_plots'])} 个图斑——"
             f"比分 {bc['separate_sorties']} 次起飞节省约 {bc['saved_min']} 分钟。"

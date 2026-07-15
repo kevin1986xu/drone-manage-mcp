@@ -95,6 +95,7 @@ def find_nearby_drones(
         并标注离哪个图斑最近（避免用平均中心把离某个图斑很近的机误排除）。
     """
     _hydrate_from_real()
+    plots._hydrate_from_real()  # 确保图斑参照也是真实数据（可能未经 query_plots 直接进入）
     # refs: [(label, [lon, lat]), ...]
     if plot_id:
         p = plots.get_plot(plot_id)
