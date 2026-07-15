@@ -16,8 +16,12 @@ const HINTS = [
 function ConfirmCard({ item }: { item: Extract<ChatItem, { kind: 'confirm' }> }) {
   const setConfirmState = useStore((s) => s.setConfirmState)
   const { payload, state } = item
+  const busyRef = useRef(false) // 防连点重入：approve 有网络延迟，期间按钮仍 pending 可点
+  const [submitting, setSubmitting] = useState(false)
   const act = async (ok: boolean) => {
-    if (state !== 'pending') return
+    if (state !== 'pending' || busyRef.current) return
+    busyRef.current = true
+    setSubmitting(true)
     if (ok) {
       try {
         const r = await approveAction(payload.action_id)
@@ -29,6 +33,8 @@ function ConfirmCard({ item }: { item: Extract<ChatItem, { kind: 'confirm' }> })
         )
       } catch (e) {
         pushEvent(`确认失败：${String(e)}`)
+        busyRef.current = false // 允许重试
+        setSubmitting(false)
       }
     } else {
       await cancelAction(payload.action_id)
@@ -53,11 +59,11 @@ function ConfirmCard({ item }: { item: Extract<ChatItem, { kind: 'confirm' }> })
         ))}
       </div>
       <div className="card-acts">
-        <button className="btn" disabled={state !== 'pending'} onClick={() => act(false)}>
+        <button className="btn" disabled={state !== 'pending' || submitting} onClick={() => act(false)}>
           {state === 'cancelled' ? '已取消' : '取消'}
         </button>
-        <button className="btn btn-go" disabled={state !== 'pending'} onClick={() => act(true)}>
-          {state === 'approved' ? '已确认' : '确认执行'}
+        <button className="btn btn-go" disabled={state !== 'pending' || submitting} onClick={() => act(true)}>
+          {state === 'approved' ? '已确认' : submitting ? '确认中…' : '确认执行'}
         </button>
       </div>
       <div className="card-note">高危操作需人工确认 · Agent 权限 ≤ 当前用户权限</div>
