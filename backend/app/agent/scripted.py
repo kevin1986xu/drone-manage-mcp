@@ -191,11 +191,33 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
     if msg.startswith("[TASK_COMPLETED]"):
         tid = re.search(r"flight_task_id=([\w\-]+)", msg)
         r = STORE.flight_tasks.get(tid.group(1)) if tid else None
-        covered = "、".join(r["covered_plots"]) if r else ""
+        plots_covered = (r or {}).get("covered_plots", [])
+        covered = "、".join(plots_covered)
+        ctx["report_task"] = r  # 供"读一下要点"跟进
         await em.say(
             f"任务完成：{r['drone_id'] if r else '无人机'} 已按航线完成飞行，"
-            f"采集影像 214 张、点云 1 组，已自动入库并关联 {covered} 三个图斑。"
+            f"采集影像 214 张、点云 1 组，已自动入库并关联 {covered} 共 {len(plots_covered)} 个图斑。"
             "核查报告草稿已生成，需要我读一下要点吗？"
+        )
+        return
+
+    # ── 报告要点（任务完成后的跟进："好的 / 读一下要点 / 念一下报告"）──
+    if ctx.get("report_task") and (
+        any(k in msg for k in ("要点", "报告", "读一下", "读取", "念"))
+        or msg.strip() in {"好的", "好", "嗯", "可以", "要", "行", "读吧", "念吧"}
+    ):
+        t = ctx["report_task"]
+        n = len(t.get("covered_plots", []))
+        names = "、".join(p.split("-")[-1] for p in t.get("covered_plots", [])[:6])
+        await em.say(
+            f"核查报告（草稿）要点如下：\n"
+            f"一、任务概况：{t['drone_id']} 执行航线 {t['route_id']}，飞行约 {t['duration_min']} 分钟，"
+            f"覆盖 {n} 个图斑（尾号 {names}{'等' if n > 6 else ''}），全程无告警。\n"
+            f"二、成果统计：可见光影像 214 张、激光点云 1 组，均已入库并与图斑关联，坐标系 CGCS2000。\n"
+            f"三、初步核查情况：各图斑均已获得有效覆盖影像；疑似变化的定性结论需人工解译确认后出具，"
+            f"当前为成果归档草稿。\n"
+            f"四、建议：优先安排高优先级图斑的解译比对；如需补拍可直接对指定图斑说\"重新规划\"。\n"
+            f"（完整报告生成与导出属后续版本能力，当前为草稿要点。）"
         )
         return
 
