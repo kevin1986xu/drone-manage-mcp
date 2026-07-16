@@ -20,6 +20,19 @@ DeerFlow 2.0 ──MCP──▶ [核心业务域：直连/同步桥]───▶
 全程不引入 Higress；工具面治理 = DeerFlow 客户端 interceptors（注入 API key）
 + FastMCP 服务端校验 + 工具内 confirm_token 人在环（框架无关）。
 
+## 目录结构与状态（M1 骨架已落地，2026-07-16）
+
+| 目录 | 内容 | 状态 |
+|---|---|---|
+| [mcp-services/](mcp-services/) | 四域 FastMCP 业务服务（真实平台直连、API key 鉴权、Nacos 注册、瘦身返回） | ✅ 单测 18/18 + 端到端冒烟 15/15（现网实测） |
+| [uav_extensions/](uav_extensions/) | 审批服务（token 签发在 Agent 之外）、DeerFlow 拦截器（硬白名单+审计）、Nacos 同步桥 | ✅ 单测 12/12；桥拉取侧现网实测 |
+| [skills/](skills/) | plot-inspection / batch-patrol / smart-recognition(占位) SKILL.md | ✅ 待 POC P5 对话验证 |
+| [deploy/](deploy/) | config.yaml.example（子代理受限工具集）/ extensions_config.json / docker-compose / 接入指南 | ✅ |
+| [poc/](poc/) | POC runbook（前置验证已完成，P1-P5 待 DeerFlow 本体跑） | 进行中 |
+
+与演示版**代码完全独立**（不 import 根目录任何模块）；四域共享单进程状态，
+端口 8201-8205（与演示版 8101+ 错开）。
+
 ## 文档索引
 
 | 文档 | 内容 |

@@ -1,0 +1,77 @@
+# 无人机飞控 Agent 平台（正式版）—— 我方服务编排
+# DeerFlow 本体用其官方 docker/docker-compose（或 make dev 本地跑），
+# 本文件只管我们的三类服务；Nacos 沿用现网（192.168.101.21:8998），不在此起。
+#
+# 用法：
+#   cd 正式开发 && docker compose -f deploy/docker-compose.yml up -d --build
+# 环境（.env 与 deploy/ 同级或 export）：
+#   DRONE_API_BASE / UAV_MCP_API_KEY / APPROVAL_ADMIN_KEY
+#   NACOS_SERVER_ADDR / NACOS_PASSWORD / MCP_SERVICE_IP（容器场景必配宿主 IP）
+#   DEERFLOW_BASE / DEERFLOW_ADMIN_TOKEN（同步桥用）
+
+services:
+  mcp-services:
+    build:
+      context: ../mcp-services
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        WORKDIR /app
+        COPY pyproject.toml ./
+        COPY src ./src
+        RUN pip install --no-cache-dir -e .
+        CMD ["python", "-m", "uav_mcp.runner"]
+    environment:
+      DRONE_API_BASE: ${DRONE_API_BASE}
+      UAV_MCP_API_KEY: ${UAV_MCP_API_KEY}
+      APPROVAL_BASE: http://approval:8205
+      NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR:-}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:-}
+      # 容器内探测的是容器 IP，注册到 Nacos 必须显式给宿主对外 IP
+      MCP_SERVICE_IP: ${MCP_SERVICE_IP:-}
+      UAV_CREATE_REAL_TASK: ${UAV_CREATE_REAL_TASK:-0}
+      UAV_REAL_PUBLISH: "0"   # 真下发起飞不允许经 compose 默认开启
+    ports:
+      - "8201:8201"
+      - "8202:8202"
+      - "8203:8203"
+      - "8204:8204"
+    depends_on:
+      - approval
+    restart: unless-stopped
+
+  approval:
+    build:
+      context: ../uav_extensions
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        WORKDIR /app
+        COPY pyproject.toml ./
+        COPY src ./src
+        RUN pip install --no-cache-dir -e .
+        CMD ["python", "-m", "uav_extensions.approval_service"]
+    environment:
+      APPROVAL_ADMIN_KEY: ${APPROVAL_ADMIN_KEY:-}
+    ports:
+      - "8205:8205"
+    restart: unless-stopped
+
+  nacos-bridge:
+    build:
+      context: ../uav_extensions
+      dockerfile_inline: |
+        FROM python:3.12-slim
+        WORKDIR /app
+        COPY pyproject.toml ./
+        COPY src ./src
+        RUN pip install --no-cache-dir -e .
+        CMD ["python", "-m", "uav_extensions.nacos_bridge"]
+    environment:
+      NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
+      NACOS_USERNAME: ${NACOS_USERNAME:-nacos}
+      NACOS_PASSWORD: ${NACOS_PASSWORD:-}
+      DEERFLOW_BASE: ${DEERFLOW_BASE:-http://host.docker.internal:8001}
+      DEERFLOW_ADMIN_TOKEN: ${DEERFLOW_ADMIN_TOKEN:-}
+      UAV_MCP_API_KEY: ${UAV_MCP_API_KEY}
+    restart: unless-stopped
+    profiles: ["bridge"]   # 需要动态发现时：docker compose --profile bridge up -d

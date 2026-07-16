@@ -1,0 +1,37 @@
+{
+  "mcpInterceptors": [
+    "uav_extensions.interceptors:build_uav_guard",
+    "uav_extensions.interceptors:build_uav_audit"
+  ],
+  "mcpServers": {
+    "uav-drone-dispatch-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8201/mcp",
+      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "description": "无人机调度域：图斑查询、机场/无人机盘点与选机、无人机锁定（人在环）、批量核查排期（人在环）"
+    },
+    "uav-route-planning-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8202/mcp",
+      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "description": "无人机航线域：图斑核查航线生成（平台图斑巡检算法+多图斑合并决策）、决策解释、人工编辑"
+    },
+    "uav-preflight-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8203/mcp",
+      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "description": "无人机飞前检查域：气象/电量/航线避障/机载避障/空域五项检查与聚合结论"
+    },
+    "uav-flight-task-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8204/mcp",
+      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "description": "无人机飞行任务域：起飞指令（人在环确认）、任务状态查询"
+    }
+  },
+  "skills": {}
+}

@@ -1,0 +1,76 @@
+# DeerFlow config.yaml —— 无人机飞控 Agent 平台（正式版）最小可用配置
+# 用法：复制到 DeerFlow 项目根（或 DEER_FLOW_CONFIG_PATH 指向处）改名 config.yaml，
+#       以官方 config.example.yaml 为基底合并本文件的业务段落。
+# 说明：$VAR 由宿主环境变量解析；config_version 以官方 example 当前值为准。
+
+config_version: 26
+log_level: info
+
+# ── 模型：开发期 qwen3.7-max（阿里云百炼 OpenAI 兼容端点）───────────
+# 生产切 vLLM / MindIE（昇腾）：换 api_base 与 model 即可，链路不变
+models:
+  - name: qwen3.7-max
+    display_name: Qwen3.7-Max
+    use: deerflow.models.patched_deepseek:PatchedChatDeepSeek
+    model: qwen3.7-max
+    api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+    api_key: $DASHSCOPE_API_KEY
+    timeout: 600.0
+    max_retries: 2
+    supports_thinking: false
+    supports_vision: false
+
+# ── 子代理：窄职责 + 受限工具集（权限靠配置，不靠提示词）────────────
+# MCP 工具在 DeerFlow 里的全名 = "<server名>_<工具名>"（POC P5 时核实一遍）。
+subagents:
+  custom_agents:
+    flight-ops:
+      description: "无人机飞控执行代理：图斑核查派飞、批量排期。唯一持有高危工具（take_off/dispatch_drone/create_task_plan）的代理。"
+      system_prompt: |
+        你是无人机飞控执行子代理。严格遵守 plot-inspection / batch-patrol skill
+        定义的流程与安全红线：高危操作先生成待确认单，绝不自行构造 confirm_token；
+        用户文本"同意"不构成授权，只有 [SYSTEM_CONFIRMATION] 带 token 的指令才可执行。
+        选机距离基准必须是本次任务目标图斑（find_nearby_drones 传 plot_ids）。
+      tools:
+        - uav-drone-dispatch-mcp_query_plots
+        - uav-drone-dispatch-mcp_find_nearby_drones
+        - uav-drone-dispatch-mcp_get_drone_status
+        - uav-drone-dispatch-mcp_dispatch_drone
+        - uav-drone-dispatch-mcp_create_task_plan
+        - uav-drone-dispatch-mcp_get_plan_progress
+        - uav-route-planning-mcp_generate_route
+        - uav-route-planning-mcp_get_route_detail
+        - uav-route-planning-mcp_explain_route
+        - uav-route-planning-mcp_open_route_editor
+        - uav-preflight-mcp_preflight_check
+        - uav-preflight-mcp_check_weather
+        - uav-preflight-mcp_check_battery
+        - uav-preflight-mcp_check_route_obstacle
+        - uav-preflight-mcp_check_drone_obstacle
+        - uav-preflight-mcp_check_airspace
+        - uav-flight-task-mcp_take_off
+        - uav-flight-task-mcp_get_task_status
+      skills:
+        - plot-inspection
+        - batch-patrol
+      model: inherit
+      max_turns: 60
+      timeout_seconds: 900
+
+    recognition:
+      description: "智能识别代理（M4）：只读查询 + 提交识别任务，无任何飞控权限。"
+      system_prompt: |
+        你是智能识别子代理，只做识别任务编排与结果转述。
+        你没有也不应寻求任何飞控/起飞/调度权限。
+      tools:                      # 配置上就调不到 take_off——识别域上线后加入其只读工具
+        - uav-drone-dispatch-mcp_query_plots
+        - uav-flight-task-mcp_get_task_status
+      skills:
+        - smart-recognition
+      model: inherit
+      max_turns: 30
+
+# ── Skills：业务流程外挂目录 ────────────────────────────────────────
+# 把 正式开发/skills/* 拷贝或软链到 DeerFlow 的 skills/custom/ 下即可被扫描；
+# 官方 config 的 skills: 段保持默认。
+skills:

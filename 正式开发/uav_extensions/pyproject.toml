@@ -1,0 +1,24 @@
+[project]
+name = "uav-extensions"
+version = "0.1.0"
+description = "DeerFlow 插件式扩展：高危审批服务、MCP 拦截器（硬白名单+审计）、Nacos→DeerFlow 同步桥。零 fork，pip 装进 DeerFlow 运行环境即可。"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "fastapi>=0.110",
+    "uvicorn>=0.30",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "mcp>=1.9"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/uav_extensions"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
