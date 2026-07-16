@@ -129,8 +129,11 @@ SSE 每行 `data: {json}`，类型：`RUN_STARTED/FINISHED/ERROR`、`TEXT_MESSAG
 │   │   └── types.ts           事件与业务类型
 │   └── public/route-editor.html   免登录航线编辑器（独立页，iframe 嵌入）
 ├── eval/                      评测集（32 条话术）+ run_eval.py 跑批脚本
-└── deploy/                    基础设施部署：Nacos + Higress docker-compose + 配置指南
+├── deploy/                    基础设施部署：Nacos + Higress docker-compose + 配置指南
+└── 正式开发/                   正式版工作区：DeerFlow 2.0 调研报告、架构定稿与建议、POC 计划
 ```
+
+> **正式版规划**：正式开发将以 DeerFlow 2.0 为底座（MCP + Skills 对话式飞控平台），调研与定稿见 [`正式开发/`](./正式开发/README.md)；本演示版继续维护，其工具层/安全机制/评测资产将平移复用。
 
 ## 四、运行环境与中间件
 
