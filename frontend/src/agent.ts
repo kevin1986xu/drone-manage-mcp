@@ -11,9 +11,19 @@ export function pushEvent(text: string) {
   }))
 }
 
-export async function sendMessage(text: string, opts: { hidden?: boolean } = {}): Promise<void> {
-  const { threadId, agentBusy, addUser, setBusy, handleEvent, advanceHint } = useStore.getState()
-  if (agentBusy || !text.trim()) return
+// 串行队列：Agent 忙时新消息排队、当前轮结束后依次发送，绝不静默丢弃。
+// 关键场景：用户在 Agent 还在流式输出时点击确认卡片——[SYSTEM_CONFIRMATION]
+// 若被丢弃，confirm_token 永远到不了 Agent，起飞会卡死在"已确认但未执行"。
+let chain: Promise<void> = Promise.resolve()
+
+export function sendMessage(text: string, opts: { hidden?: boolean } = {}): Promise<void> {
+  if (!text.trim()) return Promise.resolve()
+  chain = chain.then(() => deliver(text, opts)).catch(() => undefined)
+  return chain
+}
+
+async function deliver(text: string, opts: { hidden?: boolean }): Promise<void> {
+  const { threadId, addUser, setBusy, handleEvent, advanceHint } = useStore.getState()
   if (!opts.hidden) {
     addUser(text)
     advanceHint()
