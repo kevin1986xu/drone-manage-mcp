@@ -40,6 +40,14 @@ async def _serve_one(domain: str) -> None:
     port = config.PORTS[domain]
     # stateless：每次 tool 调用独立会话，DeerFlow 侧会话池/多客户端均可直连
     mcp.settings.stateless_http = True
+    # MCP SDK 的 DNS-rebinding 防护默认只放行 localhost Host 头，经注册 IP
+    # 访问会 421。内网服务 + API key 鉴权在前，这里关闭 Host 校验
+    # （浏览器 DNS-rebinding 攻击面不适用于服务间调用）。
+    from mcp.server.transport_security import TransportSecuritySettings
+
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=False
+    )
     app = ApiKeyMiddleware(mcp.streamable_http_app(), config.UAV_MCP_API_KEY)
     server = uvicorn.Server(uvicorn.Config(app, host=config.MCP_HOST, port=port, log_level="warning"))
 
