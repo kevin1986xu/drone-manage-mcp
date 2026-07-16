@@ -1,6 +1,23 @@
 ---
 name: plot-inspection
 description: 自然资源图斑核查派飞全流程：查图斑 → 选无人机 → 规划航线 → 飞前检查 → 人在环确认起飞。用户提到"核查/巡查图斑""派无人机去看某个地块""XX号图斑飞一下"等意图时使用。
+allowed-tools:
+  - uav-drone-dispatch-mcp_query_plots
+  - uav-drone-dispatch-mcp_find_nearby_drones
+  - uav-drone-dispatch-mcp_get_drone_status
+  - uav-drone-dispatch-mcp_dispatch_drone
+  - uav-route-planning-mcp_generate_route
+  - uav-route-planning-mcp_get_route_detail
+  - uav-route-planning-mcp_explain_route
+  - uav-route-planning-mcp_open_route_editor
+  - uav-preflight-mcp_check_weather
+  - uav-preflight-mcp_check_battery
+  - uav-preflight-mcp_check_route_obstacle
+  - uav-preflight-mcp_check_drone_obstacle
+  - uav-preflight-mcp_check_airspace
+  - uav-preflight-mcp_preflight_check
+  - uav-flight-task-mcp_take_off
+  - uav-flight-task-mcp_get_task_status
 ---
 
 # 图斑核查派飞

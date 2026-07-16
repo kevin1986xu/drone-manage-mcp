@@ -1,6 +1,9 @@
 ---
 name: smart-recognition
 description: 智能识别编排（M4 规划中）：起飞采集 → 提交识别任务 → 结果落图。用户提到"识别""变化检测""看看拍到了什么"等意图时使用。
+allowed-tools:
+  - uav-drone-dispatch-mcp_query_plots
+  - uav-flight-task-mcp_get_task_status
 ---
 
 # 智能识别编排（占位，M4 落地）

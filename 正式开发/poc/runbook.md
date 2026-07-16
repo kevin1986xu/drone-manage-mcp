@@ -1,6 +1,16 @@
 # POC Runbook（对应 docs/03-POC计划.md）
 
-> M1 骨架已就位后，POC 的 P1/P2/P4/P5 都在正式版组件上验证（不再依赖演示版服务）。
+> **2026-07-16：P1~P5 已全部跑完，结论见 docs/03《POC 结论》——GO。**
+> 本文保留为复跑手册；下述"待跑"步骤即当日实际执行步骤。
+>
+> 复跑要点：
+> - DeerFlow 栈在 `正式开发/deerflow/`（gitignore），`backend/.venv` Python 3.12；
+>   启动：`DEER_FLOW_AUTH_DISABLED=1 DASHSCOPE_API_KEY=... UAV_MCP_API_KEY=... \
+>   PYTHONPATH=. .venv/bin/python -m uvicorn app.gateway.app:app --port 8001`
+> - 对话驱动：`python3 poc/run_chat.py new "话术"`；延迟对比：`python3 poc/p3_latency.py`
+> - ⚠ SKILL.md 必须声明 `allowed-tools`（DeerFlow 全局并集策略，见 docs/03 问题 1）
+> - ⚠ pyenv 环境下 uv shim 会被 deer-flow 的 .python-version 干扰，
+>   用绝对路径 `~/.pyenv/versions/<ver>/bin/uv`
 
 ## 已完成的前置验证（2026-07-16，本机 + 现网）
 

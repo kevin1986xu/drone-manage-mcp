@@ -1,6 +1,12 @@
 ---
 name: batch-patrol
 description: 批量图斑核查排期：把一批图斑排成逐日架次计划并执行。用户提到"这批图斑N天内查完""批量巡查""排个计划"等意图时使用。
+allowed-tools:
+  - uav-drone-dispatch-mcp_query_plots
+  - uav-drone-dispatch-mcp_create_task_plan
+  - uav-drone-dispatch-mcp_get_plan_progress
+  - uav-drone-dispatch-mcp_find_nearby_drones
+  - uav-route-planning-mcp_get_route_detail
 ---
 
 # 批量巡查排期

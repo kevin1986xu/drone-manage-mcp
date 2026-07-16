@@ -74,10 +74,24 @@ async def fetch_nacos_servers(client: httpx.AsyncClient) -> dict[str, dict[str, 
         if not eps:
             logger.warning("忽略无端点的 server：%s", name)
             continue
-        ep = eps[0]
         path = ((detail.get("remoteServerConfig") or {}).get("exportPath")) or "/mcp"
+        # DIRECT 端点没有 TTL，注册 IP 变更后新旧并存——逐个探活
+        # （/healthz 免鉴权），选第一个可达的；全不可达则保持现状不写。
+        url = None
+        for ep in eps:
+            candidate = f"http://{ep.get('address')}:{ep.get('port')}"
+            try:
+                r = await client.get(f"{candidate}/healthz", timeout=2)
+                if r.status_code == 200:
+                    url = f"{candidate}{path}"
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+        if url is None:
+            logger.warning("server %s 的 %d 个端点均不可达，跳过本轮更新", name, len(eps))
+            continue
         out[name] = {
-            "url": f"http://{ep.get('address')}:{ep.get('port')}{path}",
+            "url": url,
             "description": detail.get("description") or name,
         }
     return out
