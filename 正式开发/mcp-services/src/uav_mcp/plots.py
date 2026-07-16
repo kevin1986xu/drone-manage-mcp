@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from uav_mcp import geo
@@ -11,10 +12,21 @@ from uav_mcp.state import STATE
 
 logger = logging.getLogger(__name__)
 
+HYDRATE_TTL_S = 15.0
+_last_hydrate = 0.0
+
 
 def hydrate() -> None:
-    """真实图斑全量 → STATE.plots。失败抛 DroneManageError（工具层转错误返回）。"""
+    """真实图斑全量 → STATE.plots。失败抛 DroneManageError（工具层转错误返回）。
+
+    带短 TTL 缓存：同一轮对话内多工具连续调用不重复拉平台
+    （图斑分钟级变化，15s 足够新鲜；也吸收 VPN 慢链路的放大效应）。
+    """
+    global _last_hydrate
+    if STATE.plots and time.time() - _last_hydrate < HYDRATE_TTL_S:
+        return
     plots = get_client().list_plots()
+    _last_hydrate = time.time()
     old = STATE.plots
     STATE.plots = {}
     for p in plots:

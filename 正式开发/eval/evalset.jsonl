@@ -1,0 +1,38 @@
+{"id": 1, "utterance": "帮我查一下汉川市最新下发的图斑", "setup": [], "expected_tools": ["query_plots"], "expected_args": {}}
+{"id": 2, "utterance": "现在有哪些图斑要核查？", "setup": [], "expected_tools": ["query_plots"], "expected_args": {}}
+{"id": 3, "utterance": "查一下尾号00003这个变更调查图斑的情况", "setup": [], "expected_tools": ["query_plots"], "expected_args": {"query_plots": {"plot_ids": "00003"}}}
+{"id": 4, "utterance": "汉川市还有哪些没核查的图斑", "setup": [], "expected_tools": ["query_plots"], "expected_args": {}}
+{"id": 5, "utterance": "帮我看看变更调查的00004和00005这两个图斑", "setup": [], "expected_tools": ["query_plots"], "expected_args": {"query_plots": {"plot_ids": "0000"}}}
+{"id": 6, "utterance": "这些图斑周边有哪些无人机可以用？", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["find_nearby_drones"], "expected_args": {}}
+{"id": 7, "utterance": "调度一下附近的无人机", "setup": [], "expected_tools": ["find_nearby_drones"], "expected_args": {}}
+{"id": 8, "utterance": "周边有没有能用的飞机", "setup": [], "expected_tools": ["find_nearby_drones"], "expected_args": {}}
+{"id": 9, "utterance": "庙头镇那台机场现在什么状态", "setup": [], "expected_tools": ["get_drone_status"], "expected_args": {"get_drone_status": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
+{"id": 10, "utterance": "看下下辛店镇国土所的机场电量还剩多少", "setup": [], "expected_tools": ["get_drone_status"], "expected_args": {"get_drone_status": {"drone_id": "下辛店"}}}
+{"id": 11, "utterance": "用庙头镇的无人机给这几个图斑规划航线", "setup": ["查一下变更调查批次的图斑"], "expected_tools": ["generate_route"], "expected_args": {"generate_route": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
+{"id": 12, "utterance": "规划一条能覆盖这些图斑的航线", "setup": ["查一下变更调查批次的图斑", "这些图斑附近有哪些无人机"], "expected_tools": ["generate_route"], "expected_args": {}}
+{"id": 13, "utterance": "给变更调查00005规划一条核查航线", "setup": ["查一下变更调查批次的图斑", "这些图斑附近有哪些无人机"], "expected_tools": ["generate_route"], "expected_args": {"generate_route": {"plot_ids": "00005"}}}
+{"id": 14, "utterance": "我手动调整一下航线", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["open_route_editor"], "expected_args": {}}
+{"id": 15, "utterance": "我要改一下航点", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["open_route_editor"], "expected_args": {}}
+{"id": 16, "utterance": "打开航线编辑器我自己调", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["open_route_editor"], "expected_args": {}}
+{"id": 17, "utterance": "现在这条航线多长，要飞多久", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["get_route_detail"], "expected_args": {}}
+{"id": 18, "utterance": "航线的航点列表给我看看", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["get_route_detail"], "expected_args": {}}
+{"id": 19, "utterance": "为什么这么规划？", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
+{"id": 20, "utterance": "这条航线是怎么考虑的？", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
+{"id": 21, "utterance": "为啥一条航线要覆盖这么多图斑", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
+{"id": 22, "utterance": "给我解释下这个航线的逻辑", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
+{"id": 23, "utterance": "我要起飞", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather", "take_off"], "expected_args": {}}
+{"id": 24, "utterance": "可以飞了吗？", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather"], "expected_args": {}}
+{"id": 25, "utterance": "起飞前帮我检查一下", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather"], "expected_args": {}}
+{"id": 26, "utterance": "现在天气适合飞吗", "setup": [], "expected_tools": ["check_weather"], "expected_args": {}}
+{"id": 27, "utterance": "电量够不够飞完这趟任务", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["check_battery"], "expected_args": {}}
+{"id": 28, "utterance": "空域许可申请了吗", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["check_airspace"], "expected_args": {}}
+{"id": 29, "utterance": "机载避障系统正常吗", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["check_drone_obstacle"], "expected_args": {}}
+{"id": 30, "utterance": "检查完没问题就起飞吧", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["take_off"], "expected_args": {}}
+{"id": 31, "utterance": "云梦有图斑要飞吗", "setup": [], "expected_tools": ["query_plots"], "expected_args": {"query_plots": {"region": "云梦"}}}
+{"id": 32, "utterance": "换个方案，只覆盖00005一个图斑重新规划", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00004和00005规划航线"], "expected_tools": ["generate_route"], "expected_args": {"generate_route": {"plot_ids": "00005"}}}
+{"id": 33, "utterance": "把这条航线飞低一点", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["generate_route"], "expected_args": {}}
+{"id": 34, "utterance": "每个图斑多拍几张照片", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["generate_route"], "expected_args": {}}
+{"id": 35, "utterance": "重新规划，这块拍密一点精度高些", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["generate_route"], "expected_args": {}}
+{"id": 36, "utterance": "把这些图斑按优先级排期，本周之内全部飞完，每天不超过3架次", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}
+{"id": 37, "utterance": "这几个图斑批量安排一下，分几天飞完", "setup": ["查一下变更调查批次的图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}
+{"id": 38, "utterance": "本周把汉川市的图斑都飞完", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}

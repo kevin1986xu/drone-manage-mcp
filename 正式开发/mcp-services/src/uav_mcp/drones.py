@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from uav_mcp import geo, plots
@@ -13,9 +14,17 @@ logger = logging.getLogger(__name__)
 
 STATUS_CN = {"idle": "空闲", "dispatched": "已锁定", "flying": "任务中", "maintenance": "维保", "offline": "离线"}
 
+HYDRATE_TTL_S = 15.0
+_last_hydrate = 0.0
+
 
 def hydrate() -> None:
+    """设备注册表 → STATE.drones，带短 TTL 缓存（见 plots.hydrate 说明）。"""
+    global _last_hydrate
+    if STATE.drones and time.time() - _last_hydrate < HYDRATE_TTL_S:
+        return
     docks = get_client().list_docks()
+    _last_hydrate = time.time()
     old = STATE.drones
     STATE.drones = {}
     for d in docks:
