@@ -93,19 +93,22 @@ def find_nearby_drones(
     plot_id: str | None = None,
     location: dict[str, Any] | None = None,
     radius_km: float = 5.0,
+    plot_ids: list[str] | str | None = None,
 ) -> dict[str, Any]:
     """查询图斑周边可用的无人机。
 
-    用户说"这些图斑附近有哪些无人机 / 调度周边无人机"时用本工具，
-    **通常不传 plot_id**：不传时以当前查询到的**全部**待核查图斑为参照集，
-    无人机只要落在任一图斑 radius_km 内即纳入，距离为到最近图斑的距离，
-    结果里 nearest_plot 标明离哪个图斑最近——这样离某个图斑近的机不会被漏掉。
-    只有用户明确点名某一个图斑时才传 plot_id。radius_km 默认 5。
-    返回每架无人机的编号、机型、位置、电量、挂载、状态、最近图斑及距离，
-    按距离升序。调度建议（选哪架）由你综合电量/距离/挂载自行推理给出；
-    覆盖多个图斑的批量任务通常需要多架无人机，可分别就近选择。
+    两种用法，务必区分：
+    ① **为某批图斑选执行设备**（准备规划航线/派任务时）：必须传 plot_ids=
+      本次要执行任务的目标图斑——距离按这些目标图斑计算。**选机的距离基准
+      必须是要飞的图斑**；绝不能用"全部图斑盘点"里的距离给某批图斑选机
+      （那个距离是到任意最近图斑的，可能与本次目标无关）。
+    ② **泛盘点**（"这些图斑附近有哪些无人机"）：不传参照，以当前查询到的
+      全部待核查图斑为参照集，结果 nearest_plot 标明各机离哪个图斑最近。
+    radius_km 默认 5。返回编号、机型、电量、挂载、状态、距离，按距离升序。
+    调度建议由你综合电量/距离/挂载推理给出；一旦确定了要飞哪批图斑，
+    推荐设备前应按用法①重新查询，不要沿用泛盘点的旧距离。
     """
-    return drones_core.find_nearby_drones(plot_id, location, radius_km)
+    return drones_core.find_nearby_drones(plot_id, location, radius_km, _as_list(plot_ids))
 
 
 @tool

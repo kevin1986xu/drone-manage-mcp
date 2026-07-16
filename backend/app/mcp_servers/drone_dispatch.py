@@ -30,10 +30,13 @@ def query_plots(
 
 @mcp.tool()
 def find_nearby_drones(
-    plot_id: str | None = None, location: dict[str, Any] | None = None, radius_km: float = 5.0
+    plot_id: str | None = None,
+    location: dict[str, Any] | None = None,
+    radius_km: float = 5.0,
+    plot_ids: list[str] | None = None,
 ) -> dict[str, Any]:
-    """查询某图斑或坐标周边可用无人机（编号/机型/电量/挂载/距离），radius_km 默认 5。"""
-    return drones_core.find_nearby_drones(plot_id, location, radius_km)
+    """查询周边可用无人机；为某批图斑选机时传 plot_ids（距离按目标图斑算），泛盘点则不传参照。radius_km 默认 5。"""
+    return drones_core.find_nearby_drones(plot_id, location, radius_km, plot_ids)
 
 
 @mcp.tool()

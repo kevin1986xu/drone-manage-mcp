@@ -84,20 +84,32 @@ def find_nearby_drones(
     plot_id: str | None = None,
     location: dict[str, Any] | None = None,
     radius_km: float = 5.0,
+    plot_ids: list[str] | None = None,
 ) -> dict[str, Any]:
     """查询参照物周边的可用无人机。
 
-    参照物三种情形：
+    参照物四种情形（按优先级）：
+      - plot_ids：**本次要执行任务的目标图斑集合**——为某批图斑选机时必须用它，
+        距离按这些目标图斑计算（选机的距离基准必须是要飞的图斑，
+        不能用"全部图斑里最近的"顶替）；
       - plot_id：指定单个图斑；
       - location：指定坐标；
-      - 都不给："这些图斑附近" → 以**当前查询到的全部待核查图斑**为参照集，
-        无人机只要落在**任一图斑** radius 内即纳入，距离取到最近图斑的距离，
-        并标注离哪个图斑最近（避免用平均中心把离某个图斑很近的机误排除）。
+      - 都不给："这些图斑附近有哪些设备"类盘点 → 以当前查询到的全部待核查
+        图斑为参照集，无人机落在任一图斑 radius 内即纳入，距离取到最近图斑，
+        并标注离哪个图斑最近。
     """
     _hydrate_from_real()
     plots._hydrate_from_real()  # 确保图斑参照也是真实数据（可能未经 query_plots 直接进入）
     # refs: [(label, [lon, lat]), ...]
-    if plot_id:
+    if plot_ids:
+        refs = []
+        for pid in plot_ids:
+            p = plots.get_plot(pid)
+            if p:
+                refs.append((p["plot_id"], p["centroid"]))
+        if not refs:
+            return {"error": f"目标图斑不存在：{', '.join(plot_ids)}", "drones": []}
+    elif plot_id:
         p = plots.get_plot(plot_id)
         if not p:
             return {"error": f"图斑 {plot_id} 不存在", "drones": []}
@@ -147,7 +159,10 @@ def find_nearby_drones(
         drones_out.append(v)
     out = {
         "radius_km": radius_km,
-        "reference": "查询到的全部图斑" if multi else refs[0][0],
+        "reference": (
+            f"本次任务目标图斑（{len(refs)} 个）" if plot_ids
+            else ("查询到的全部图斑" if multi else refs[0][0])
+        ),
         "reference_plot_count": len(refs) if multi else 1,
         "count": len(drones_out),
         "drones": drones_out,

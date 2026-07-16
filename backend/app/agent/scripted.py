@@ -421,7 +421,8 @@ async def _handle(em: _Emitter, ctx: dict[str, Any], msg: str) -> None:
         if not drone_id and not explicit_plot:
             drone_id = ctx.get("drone_id")
         if not drone_id:
-            nd = T.find_nearby_drones.func(plot_id=plot_ids[0], radius_km=1000)
+            # 就近选机：距离基准 = 本次要规划的目标图斑（不是全部图斑）
+            nd = T.find_nearby_drones.func(plot_ids=plot_ids, radius_km=1000)
             idle = [d for d in nd["drones"] if d["status"] == "idle"] or nd["drones"]
             drone_id = idle[0]["drone_id"] if idle else None
             if not drone_id:

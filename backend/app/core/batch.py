@@ -165,8 +165,9 @@ def _activate_and_run_day1(params: dict[str, Any]) -> dict[str, Any]:
 
 
 def _pick_drone(plot_ids: list[str]) -> dict[str, Any] | None:
-    """为一个架次选最近的**空闲**无人机（已被本计划锁定的机不再重复分配）。"""
-    r = drones_core.find_nearby_drones(plot_id=plot_ids[0], radius_km=1000)
+    """为一个架次选最近的**空闲**无人机（距离按该架次全部目标图斑算；
+    已被本计划锁定的机不再重复分配）。"""
+    r = drones_core.find_nearby_drones(plot_ids=plot_ids, radius_km=1000)
     idle = [d for d in r["drones"] if d["status"] == "idle"]
     if not idle:
         return None
