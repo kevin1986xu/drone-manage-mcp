@@ -1,0 +1,66 @@
+diff --git a/frontend/src/app/workspace/chats/[thread_id]/page.tsx b/frontend/src/app/workspace/chats/[thread_id]/page.tsx
+index 0281062..f40fdd8 100644
+--- a/frontend/src/app/workspace/chats/[thread_id]/page.tsx
++++ b/frontend/src/app/workspace/chats/[thread_id]/page.tsx
+@@ -201,6 +201,20 @@ export default function ChatPage() {
+     },
+     [sendMessage, threadId],
+   );
++  // UAV 人在环：确认卡片批准后回发 [SYSTEM_CONFIRMATION]（隐藏消息，模型可见）
++  useEffect(() => {
++    const onUavConfirmation = (e: Event) => {
++      const text = (e as CustomEvent<{ text?: string }>).detail?.text;
++      if (!text) return;
++      void sendMessage(threadId, { text, files: [] }, undefined, {
++        additionalKwargs: { hide_from_ui: true },
++      });
++    };
++    window.addEventListener("uav:system-confirmation", onUavConfirmation);
++    return () =>
++      window.removeEventListener("uav:system-confirmation", onUavConfirmation);
++  }, [sendMessage, threadId]);
++
+   const handleStop = useCallback(async () => {
+     await thread.stop();
+   }, [thread]);
+diff --git a/frontend/src/components/workspace/messages/message-group.tsx b/frontend/src/components/workspace/messages/message-group.tsx
+index 4ea926d..8394113 100644
+--- a/frontend/src/components/workspace/messages/message-group.tsx
++++ b/frontend/src/components/workspace/messages/message-group.tsx
+@@ -11,6 +11,7 @@ import {
+   MessageSquareTextIcon,
+   NotebookPenIcon,
+   SearchIcon,
++  ShieldAlertIcon,
+   SquareTerminalIcon,
+   WrenchIcon,
+ } from "lucide-react";
+@@ -38,6 +39,8 @@ import { extractTitleFromMarkdown } from "@/core/utils/markdown";
+ import { env } from "@/env";
+ import { cn } from "@/lib/utils";
+ 
++import { isUavConfirmation, UavConfirmCard } from "./uav-confirm-card";
++
+ import { useArtifacts } from "../artifacts";
+ import { FlipDisplay } from "../flip-display";
+ import { Tooltip } from "../tooltip";
+@@ -477,6 +480,19 @@ function ToolCall({
+       fallback
+     );
+ 
++  // UAV 人在环：MCP 工具返回 requires_confirmation → 渲染原生确认卡片
++  if (isUavConfirmation(result)) {
++    return (
++      <ChainOfThoughtStep
++        key={id}
++        label={resolveLabel(result.summary?.title ?? `高危操作 ${result.action} 待人工确认`)}
++        icon={ShieldAlertIcon}
++      >
++        <UavConfirmCard result={result} />
++      </ChainOfThoughtStep>
++    );
++  }
++
+   if (name === "web_search") {
+     let label: React.ReactNode = t.toolCalls.searchForRelatedInfo;
+     if (typeof args.query === "string") {
