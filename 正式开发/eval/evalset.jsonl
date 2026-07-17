@@ -36,3 +36,5 @@
 {"id": 36, "utterance": "把这些图斑按优先级排期，本周之内全部飞完，每天不超过3架次", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}
 {"id": 37, "utterance": "这几个图斑批量安排一下，分几天飞完", "setup": ["查一下变更调查批次的图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}
 {"id": 38, "utterance": "本周把汉川市的图斑都飞完", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}
+{"id": 39, "utterance": "帮我看下任务 T-0001 的成果报告", "expected_tools": ["get_task_report"]}
+{"id": 40, "utterance": "查一下历史飞行任务，最近飞过哪些", "expected_tools": ["list_task_history"]}

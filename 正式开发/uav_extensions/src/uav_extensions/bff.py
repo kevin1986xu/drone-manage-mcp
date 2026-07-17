@@ -19,6 +19,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 import os
@@ -54,6 +55,47 @@ app.add_middleware(
 # 前端 thread_id（任意串）→ DeerFlow thread UUID
 _threads: dict[str, str] = {}
 
+# 任务完成播报：watcher 攒下的系统提示，随该线程下一轮用户消息注入
+# （AG-UI 是请求-响应 SSE，无服务端推送通道；实时进度由前端轮询 /api/tasks 的
+# 遥测组件覆盖，这里补的是"完成后模型主动播报"的对话侧闭环）
+_pending_updates: dict[str, list[str]] = {}
+
+WATCH_INTERVAL_S = 10
+WATCH_TIMEOUT_S = 30 * 60
+
+
+async def _watch_task(frontend_tid: str, flight_task_id: str) -> None:
+    """起飞后后台盯任务状态，完成时把成果摘要挂到该线程的待播报队列。"""
+    deadline = asyncio.get_event_loop().time() + WATCH_TIMEOUT_S
+    misses = 0
+    while asyncio.get_event_loop().time() < deadline:
+        await asyncio.sleep(WATCH_INTERVAL_S)
+        st = await _mcp_call(TASK_MCP, "get_task_status", {"flight_task_id": flight_task_id})
+        if not st or st.get("error"):
+            misses += 1
+            if misses >= 5:
+                logger.warning("任务 %s 状态连续拉取失败，停止盯守", flight_task_id)
+                return
+            continue
+        misses = 0
+        if st.get("status") in ("completed", "failed", "cancelled"):
+            if st["status"] == "completed":
+                report = await _mcp_call(TASK_MCP, "get_task_report", {"flight_task_id": flight_task_id})
+                if report and not report.get("error"):
+                    brief = (f"覆盖 {len(report.get('covered_plots', []))} 个图斑、"
+                             f"共 {report.get('photos', {}).get('total', '—')} 张照片、"
+                             f"用时约 {report.get('duration_min', '—')} 分钟")
+                else:
+                    brief = "详情可查成果报告"
+                text = (f"[SYSTEM_TASK_UPDATE] 飞行任务 {flight_task_id} 已完成：{brief}。"
+                        f"请先向用户简短播报这一结果（可调 get_task_report 取全量），再回应用户本轮的话。")
+            else:
+                text = (f"[SYSTEM_TASK_UPDATE] 飞行任务 {flight_task_id} 状态变为 {st['status']}，"
+                        f"请先向用户播报，再回应用户本轮的话。")
+            _pending_updates.setdefault(frontend_tid, []).append(text)
+            logger.info("任务 %s 终态 %s，已挂入线程 %s 待播报", flight_task_id, st["status"], frontend_tid)
+            return
+
 
 def _df_headers() -> dict[str, str]:
     h = {"Content-Type": "application/json"}
@@ -63,10 +105,16 @@ def _df_headers() -> dict[str, str]:
 
 
 async def _df_thread(client: httpx.AsyncClient, frontend_tid: str) -> str:
-    if frontend_tid not in _threads:
-        r = await client.post(f"{DEERFLOW}/api/threads", json={}, headers=_df_headers())
-        r.raise_for_status()
-        _threads[frontend_tid] = r.json()["thread_id"]
+    if frontend_tid in _threads:
+        # Gateway 重启会丢线程：预检一次（本机毫秒级），失效则重建（对话历史随之重置）
+        r = await client.get(f"{DEERFLOW}/api/threads/{_threads[frontend_tid]}", headers=_df_headers())
+        if r.status_code == 200:
+            return _threads[frontend_tid]
+        logger.warning("DeerFlow thread %s 已失效（%s），为 %s 重建", _threads[frontend_tid], r.status_code, frontend_tid)
+        del _threads[frontend_tid]
+    r = await client.post(f"{DEERFLOW}/api/threads", json={}, headers=_df_headers())
+    r.raise_for_status()
+    _threads[frontend_tid] = r.json()["thread_id"]
     return _threads[frontend_tid]
 
 
@@ -189,6 +237,10 @@ class RunRequest(BaseModel):
 async def _agui_stream(frontend_tid: str, message: str) -> AsyncIterator[str]:
     run_id = uuid.uuid4().hex[:8]
     yield _sse({"type": "RUN_STARTED", "run_id": run_id})
+    # 有完成播报待注入：拼在用户消息前，模型先播报再答题
+    updates = _pending_updates.pop(frontend_tid, [])
+    if updates:
+        message = "\n".join(updates) + "\n\n" + message
     started_calls: set[str] = set()          # 已发 TOOL_CALL_START 的 id
     call_args: dict[str, str] = {}           # tool_call_id → args JSON 串（chunk 累积）
     call_args_full: dict[str, dict] = {}     # tool_call_id → 完整 args（tool_calls 直带，chunk 缺失时兜底）
@@ -276,6 +328,10 @@ async def _agui_stream(frontend_tid: str, message: str) -> AsyncIterator[str]:
                             args = call_args_full.get(cid, {})
                         for d in await directives_for(tool, result, args if isinstance(args, dict) else {}):
                             yield _sse(d)
+                        if (tool == "take_off" and isinstance(result, dict)
+                                and result.get("status") == "airborne" and result.get("flight_task_id")):
+                            asyncio.get_event_loop().create_task(
+                                _watch_task(frontend_tid, result["flight_task_id"]))
         if text_open:
             yield _sse({"type": "TEXT_MESSAGE_END", "message_id": text_open})
         yield _sse({"type": "RUN_FINISHED", "run_id": run_id})

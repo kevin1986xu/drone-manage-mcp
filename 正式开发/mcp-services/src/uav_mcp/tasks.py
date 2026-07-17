@@ -188,3 +188,61 @@ def get_task_status(flight_task_id: str) -> dict[str, Any]:
         "covered_plots": t["covered_plots"],
         "source": "本地估算（未创建平台任务）",
     }
+
+
+def get_task_report(flight_task_id: str) -> dict[str, Any]:
+    """任务成果报告（举证摘要）。任务完成后可用；进行中返回带进度的提示。"""
+    t = STATE.flight_tasks.get(flight_task_id.upper()) or STATE.flight_tasks.get(flight_task_id)
+    if not t:
+        return {"error": f"任务 {flight_task_id} 不存在"}
+    status = get_task_status(t["flight_task_id"])  # 顺带推进完成态
+    if t["status"] != "completed":
+        return {
+            "error": f"任务 {t['flight_task_id']} 尚未完成（{status.get('status')}，进度 {status.get('progress_pct', '—')}%），完成后才能生成成果报告",
+        }
+    detail = routes_core.get_route_detail(t["route_id"], t.get("route_version"))
+    photo_num = 4
+    _, rev = routes_core._rev(t["route_id"], t.get("route_version"))
+    if rev:
+        photo_num = rev.get("photo_num", 4)
+    plots = t.get("covered_plots", [])
+    finished_at = t.get("started_at", 0) + t.get("duration_min", 0) * 60
+    return {
+        "flight_task_id": t["flight_task_id"],
+        "drone_id": t["drone_id"],
+        "route": {
+            "route_id": t["route_id"],
+            "version": t.get("route_version"),
+            "length_km": detail.get("length_km"),
+            "altitude_m": detail.get("altitude_m"),
+        },
+        "covered_plots": plots,
+        "photos": {"per_plot": photo_num, "total": photo_num * len(plots)},
+        "started_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(t.get("started_at", 0))),
+        "finished_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(finished_at)),
+        "duration_min": t.get("duration_min"),
+        "evidence_note": "照片按图斑编号归档于管理平台媒体库，可作为图斑核查举证材料；"
+        "AI 变化识别分析待智能识别能力接入（规划中）",
+    }
+
+
+def list_task_history(status: str | None = None, drone_id: str | None = None, limit: int = 10) -> dict[str, Any]:
+    """历史任务列表（倒序）。可按状态（flying/completed）或无人机过滤。"""
+    items = []
+    for t in STATE.flight_tasks.values():
+        get_task_status(t["flight_task_id"])  # 推进完成态
+        if status and t["status"] != status:
+            continue
+        if drone_id and drone_id not in t["drone_id"]:
+            continue
+        items.append({
+            "flight_task_id": t["flight_task_id"],
+            "status": t["status"],
+            "drone_id": t["drone_id"],
+            "route_id": t["route_id"],
+            "covered_plots_count": len(t.get("covered_plots", [])),
+            "started_at": time.strftime("%Y-%m-%d %H:%M", time.localtime(t.get("started_at", 0))),
+            "duration_min": t.get("duration_min"),
+        })
+    items.sort(key=lambda i: i["started_at"], reverse=True)
+    return {"total": len(items), "tasks": items[: max(1, min(limit, 50))]}

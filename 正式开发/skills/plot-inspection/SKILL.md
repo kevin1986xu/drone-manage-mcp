@@ -18,6 +18,8 @@ allowed-tools:
   - uav-preflight-mcp_preflight_check
   - uav-flight-task-mcp_take_off
   - uav-flight-task-mcp_get_task_status
+  - uav-flight-task-mcp_get_task_report
+  - uav-flight-task-mcp_list_task_history
 ---
 
 # 图斑核查派飞
@@ -51,6 +53,8 @@ allowed-tools:
 - 上下文里已有明确目标（航线/图斑/无人机）时，追问和调参**直接行动**，不反问确认。
 - 用户提出航线调整诉求（"飞低一点""只覆盖某块""多拍几张"）：立即按 generate_route
   的软约束映射翻译成参数重规划（带 replace_route_id），用返回的前后对比答复。
+- **起飞成功后本流程即完成**：只播报任务状态，**严禁自发重新规划已在执行的目标**
+  （不要再调 query_plots/generate_route 重走一遍流程）；用户明确提出新目标才开新一轮。
 
 ## 安全红线（不可协商）
 
