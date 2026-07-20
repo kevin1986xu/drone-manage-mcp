@@ -38,8 +38,18 @@ def _load_tenant_keys() -> dict:
 UAV_TENANT_KEYS = _load_tenant_keys()
 
 # ── 平台回源鉴权（关三，见 docs/07 §4.3）─────────────────────
-# 服务账号静态 token：配置后 DroneManageClient 回源默认带 Authorization: Bearer <该值>；
-# 未配置则保持无头裸调（平台当前内网信任、不校验——向后兼容）。
+# 【网关认证模式】配置 DRONE_GATEWAY_BASE 后，回源走平台网关（若依 Sa-Token）：
+#   base=网关地址、path 加 DRONE_GATEWAY_PREFIX 前缀、账号密码登录拿 JWT 并带
+#   Authorization: Bearer；token 缓存 + 401 自动重登。这是正规回源（平台认身份、
+#   可做 dataScope），取代直连内部端口 10009（绕过认证）。
+# 未配置 DRONE_GATEWAY_BASE 则保持直连 DRONE_API_BASE 裸调（向后兼容，演示可用）。
+DRONE_GATEWAY_BASE = os.getenv("DRONE_GATEWAY_BASE", "").strip().rstrip("/")
+DRONE_GATEWAY_PREFIX = os.getenv("DRONE_GATEWAY_PREFIX", "/drone").strip()
+DRONE_LOGIN_PATH = os.getenv("DRONE_LOGIN_PATH", "/auth/dronelogin").strip()
+DRONE_LOGIN_USERNAME = os.getenv("DRONE_LOGIN_USERNAME", "").strip()
+DRONE_LOGIN_PASSWORD = os.getenv("DRONE_LOGIN_PASSWORD", "").strip()
+
+# 服务账号静态 token（备选，不走登录时直接带；网关模式优先用登录 token）。
 DRONE_PLATFORM_TOKEN = os.getenv("DRONE_PLATFORM_TOKEN", "").strip()
 # 透传用户身份的请求头名（P1 用户级授权：拦截器把发起用户身份注入此头，
 # 平台据此做 dataScope 过滤）。默认空=不启用透传。

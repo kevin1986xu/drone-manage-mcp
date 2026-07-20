@@ -17,6 +17,7 @@ from __future__ import annotations
 import contextvars
 import logging
 import re
+import threading
 from functools import lru_cache
 from typing import Any
 
@@ -78,24 +79,52 @@ def wkt_polygon_to_geojson(wkt: str) -> dict[str, Any] | None:
 
 class DroneManageClient:
     def __init__(self, base: str) -> None:
-        self.base = base
+        # 网关认证模式（配 DRONE_GATEWAY_BASE）vs 直连模式（现状，向后兼容）
+        self.gateway = config.DRONE_GATEWAY_BASE
+        self.prefix = config.DRONE_GATEWAY_PREFIX if self.gateway else ""
+        self.base = self.gateway or base
+        self._token: str | None = None
+        self._token_lock = threading.Lock()
         # VPN 链路有阵发性丢包（2026-07-20 实测坏窗口新建连接失败率 ~25%）：
         # retries=2 只重试连接建立阶段（幂等安全），吸收 SYN 级瞬断；
         # keepalive 拉长到 60s，减少新建连接次数（httpx 默认 5s 一到就丢弃连接）
         self.http = httpx.Client(
-            base_url=base,
+            base_url=self.base,
             timeout=25,
             transport=httpx.HTTPTransport(retries=2),
             limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=60),
         )
 
-    def _auth_headers(self) -> dict[str, str]:
-        """回源鉴权头（关三，见 docs/07 §4.3）：服务账号 token + 透传用户身份。
+    def _login(self) -> str:
+        """账号密码登录平台网关，返回 access_token（若依 Sa-Token JWT）。"""
+        resp = self.http.post(
+            config.DRONE_LOGIN_PATH,
+            json={"username": config.DRONE_LOGIN_USERNAME, "password": config.DRONE_LOGIN_PASSWORD},
+        )
+        resp.raise_for_status()
+        data = (resp.json() or {}).get("data") or {}
+        tok = data.get("access_token") or data.get("token")
+        if not tok:
+            raise DroneManageError("平台登录未返回 access_token")
+        return tok
 
-        两者都未配置时返回空 → 保持无头裸调（平台内网信任，向后兼容）。
+    def _ensure_token(self, force: bool = False) -> str:
+        with self._token_lock:
+            if force or not self._token:
+                self._token = self._login()
+                logger.info("平台网关登录成功（账号 %s）", config.DRONE_LOGIN_USERNAME)
+            return self._token
+
+    def _auth_headers(self, relogin: bool = False) -> dict[str, str]:
+        """回源鉴权头（关三，见 docs/07 §4.3）。
+
+        网关模式：账号登录拿 JWT（缓存/401 重登）；否则回落静态 token。
+        用户身份透传（P1）在两种模式下都注入。都没配则空头（直连裸调，向后兼容）。
         """
         headers: dict[str, str] = {}
-        if config.DRONE_PLATFORM_TOKEN:
+        if self.gateway and config.DRONE_LOGIN_USERNAME:
+            headers["Authorization"] = f"Bearer {self._ensure_token(force=relogin)}"
+        elif config.DRONE_PLATFORM_TOKEN:
             headers["Authorization"] = f"Bearer {config.DRONE_PLATFORM_TOKEN}"
         if config.DRONE_USER_ID_HEADER:
             uid = _current_user_id.get()
@@ -104,19 +133,29 @@ class DroneManageClient:
         return headers
 
     def _call(self, method: str, path: str, **kw) -> Any:
-        auth = self._auth_headers()
-        if auth:
-            kw["headers"] = {**auth, **(kw.get("headers") or {})}
+        full = f"{self.prefix}{path}" if self.prefix else path
+        user_kw = kw.pop("headers", None) or {}
+
+        def _once(relogin: bool) -> httpx.Response:
+            headers = {**self._auth_headers(relogin=relogin), **user_kw}
+            return self.http.request(method, full, headers=headers or None, **kw)
+
         try:
-            resp = self.http.request(method, path, **kw)
+            resp = _once(relogin=False)
+            # 网关模式下 token 过期返回 401/403 → 重登重试一次
+            if resp.status_code in (401, 403) and self.gateway and config.DRONE_LOGIN_USERNAME:
+                logger.info("平台回源 %s，token 疑似过期，重登重试", resp.status_code)
+                resp = _once(relogin=True)
             resp.raise_for_status()
             body = resp.json()
+        except DroneManageError:
+            raise
         except Exception as exc:  # noqa: BLE001
-            raise DroneManageError(f"{method} {path} 调用失败：{exc}") from exc
+            raise DroneManageError(f"{method} {full} 调用失败：{exc}") from exc
         # 响应包装不统一：AjaxResult{code,msg,data} / TableDataInfo{code,rows,total} / R{code,data}
         code = body.get("code")
         if code not in (200, 0):
-            raise DroneManageError(f"{method} {path} 业务失败：code={code} msg={body.get('msg')}")
+            raise DroneManageError(f"{method} {full} 业务失败：code={code} msg={body.get('msg')}")
         return body
 
     # ── 图斑（FlyWorkZone，zoneType=图斑）───────────────────
@@ -467,6 +506,7 @@ class DroneManageClient:
 
 @lru_cache(maxsize=1)
 def get_client() -> DroneManageClient:
-    if not config.DRONE_API_BASE:
-        raise DroneManageError("未配置 DRONE_API_BASE（无人机平台地址），无法访问业务数据")
+    # 网关模式用 DRONE_GATEWAY_BASE，直连模式用 DRONE_API_BASE，至少配一个
+    if not config.DRONE_GATEWAY_BASE and not config.DRONE_API_BASE:
+        raise DroneManageError("未配置平台地址（DRONE_GATEWAY_BASE 或 DRONE_API_BASE），无法访问业务数据")
     return DroneManageClient(config.DRONE_API_BASE)
