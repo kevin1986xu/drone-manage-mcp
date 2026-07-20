@@ -50,3 +50,41 @@ def bearing_deg(a: list[float], b: list[float]) -> float:
     dx = (b[0] - a[0]) * m_per_deg_lon(lat0)
     dy = (b[1] - a[1]) * EARTH_M_PER_DEG_LAT
     return (math.degrees(math.atan2(dx, dy)) + 360) % 360
+
+
+def point_in_ring(pt: list[float], ring: list[list[float]]) -> bool:
+    """射线法点在多边形内判断（含边界近似）。ring 首尾可闭合可不闭合。"""
+    pts = ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring
+    x, y = pt[0], pt[1]
+    inside = False
+    n = len(pts)
+    for i in range(n):
+        x1, y1 = pts[i][0], pts[i][1]
+        x2, y2 = pts[(i + 1) % n][0], pts[(i + 1) % n][1]
+        if (y1 > y) != (y2 > y):
+            xin = (x2 - x1) * (y - y1) / (y2 - y1) + x1
+            if x < xin:
+                inside = not inside
+    return inside
+
+
+def _ccw(a: list[float], b: list[float], c: list[float]) -> bool:
+    return (c[1] - a[1]) * (b[0] - a[0]) > (b[1] - a[1]) * (c[0] - a[0])
+
+
+def segments_intersect(p1: list[float], p2: list[float], p3: list[float], p4: list[float]) -> bool:
+    """两线段是否相交（不含共线重叠的退化情形，围栏检测精度足够）。"""
+    return _ccw(p1, p3, p4) != _ccw(p2, p3, p4) and _ccw(p1, p2, p3) != _ccw(p1, p2, p4)
+
+
+def polyline_crosses_ring(line: list[list[float]], ring: list[list[float]]) -> bool:
+    """折线是否穿越多边形：任一顶点在内，或任一段与多边形边相交。"""
+    if any(point_in_ring(p, ring) for p in line):
+        return True
+    pts = ring[:-1] if len(ring) > 1 and ring[0] == ring[-1] else ring
+    n = len(pts)
+    for i in range(1, len(line)):
+        for j in range(n):
+            if segments_intersect(line[i - 1], line[i], pts[j], pts[(j + 1) % n]):
+                return True
+    return False

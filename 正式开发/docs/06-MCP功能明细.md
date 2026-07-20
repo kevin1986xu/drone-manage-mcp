@@ -9,6 +9,9 @@
 >
 > 注：域是**逻辑分类**,与物理 server 的对应关系见文末附录（如"成果报告"物理上在
 > uav-flight-task-mcp,逻辑上属成果域）。
+>
+> 厂商：未标注默认大疆机型;吉威等多厂商经 drone_id → 厂商 adapter 路由,不支持的动作
+> 返回明确"该机型不支持"（而非超时/500）,各域落地时逐项补标厂商覆盖（05 §6.2）。
 
 ---
 
@@ -59,20 +62,20 @@
 | 批量排期计划 | create_task_plan | 确定性装箱：优先级排序+就近合并架次(≤3图斑/3km)+逐日装箱+截止校验;计划确认=授权 | 🔒 |
 | 计划进度 | get_plan_progress | 排期表推进状态（前端 show_plan） | 读 |
 
-### 3.2 时间调度（🔵 P0,uav-task-schedule-mcp）
+### 3.2 时间调度（✅ 已上线 2026-07-20,uav-task-schedule-mcp:8209）
 
-| 细分功能 | 工具 | 说明 | 风险 |
-|---|---|---|---|
-| **排期建议** | suggest_schedule | 天气窗口(平台红黄绿逐日)×设备档期×优先级×截止时间→建议排期表+理由;**只算不写** | 读 |
-| 定时任务 | create_scheduled_task | 平台 executionMode=scheduled,指定 executionTime | 🔒 |
-| 循环任务 | create_recurring_task | executionMode=recurring,日期区间内每日执行（每日巡查正解） | 🔒 |
-| 排期清单/取消 | list_scheduled_tasks / cancel_scheduled_task | 未来任务视图 | 读 / 🔒 |
-| 重排期 | reschedule_task | 平台 planNewTask/{taskId}（"周三的挪到周四上午"） | 🔒 |
-| 失败重试 | retry_failed_task | 平台 failTaskRetry/{jobId},自动重新排期下发 | 🔒 |
-| 断点续飞 | resume_from_breakpoint | 平台 breakPointFlight/{jobId},中断处继续 | 🔒 |
-| 航线连接优化 | optimize_route_connection | 平台 optimizeRoute/{taskId}:机场→航线起点安全连接 | 写 |
-| 档期冲突检测 | get_schedule_conflicts(drone, range) | wayline-jobs 时间窗求交,本地计算 | 读 |
-| 多机接力排期 | suggest_schedule(relay 模式) | 超大图斑（如现网 1472 亩规委会图斑）单机续航不够→多架次接力/多机分片,司空 2"跨区域多机统一调度"的对话化 | 读 |
+| 细分功能 | 工具 | 说明 | 状态 | 风险 |
+|---|---|---|---|---|
+| **排期建议** | suggest_schedule | 天气窗口(Open-Meteo 逐日,平台无逐日接口)×设备档期(wayline-jobs)×优先级→建议排期表+理由;**只算不写** | ✅ | 读 |
+| 定时任务 | create_scheduled_task | 平台 executionMode=scheduled,指定 executionTime;受 UAV_CREATE_REAL_TASK 开关约束 | ✅ | 🔒 |
+| 循环任务 | create_recurring_task | executionMode=recurring + cycleConfig(daily/week/month),日期区间内每日执行 | ✅ | 🔒 |
+| 排期清单/取消 | list_scheduled_tasks / cancel_scheduled_task | 任务视图(待执行/执行中/…) / 取消为 PUT cancel | ✅ | 读 / 🔒 |
+| 重排期 | reschedule_task(new_time?) | 给时间→PUT 改 executionTime;不给→平台 planNewTask 自动排（平台不收时间参数） | ✅ | 🔒 |
+| 失败重试 | retry_failed_task(job_id) | 平台 failTaskRetry/{jobId},自动重新排期下发;jobId=wayline 作业号非任务 ID | ✅ | 🔒 |
+| 断点续飞 | resume_from_breakpoint(job_id) | 平台 breakPointFlight/{jobId},中断处继续 | ✅ | 🔒 |
+| 航线连接优化 | optimize_route_connection | 平台 optimizeRoute/{taskId}:机场→航线起点安全连接(minHeightAboveTerrain) | ✅ | 写 |
+| 档期冲突检测 | get_schedule_conflicts(drone, range) | /api/tasks/device/search 时间窗作业清单（jobId 出口） | ✅ | 读 |
+| 多机接力排期 | suggest_schedule(relay 模式) | 超大图斑（如现网 1472 亩规委会图斑）单机续航不够→多架次接力/多机分片,司空 2"跨区域多机统一调度"的对话化 | ⚪ | 读 |
 
 ## 主线四：飞行域
 
@@ -148,12 +151,12 @@
 | 细分功能 | 工具 | 说明 | 状态 | 风险 |
 |---|---|---|---|---|
 | 任务成果报告 | get_task_report | 覆盖图斑/拍照数/起止时间/归档说明;进行中返回进度提示 | ✅ | 读 |
-| 媒体清单 | list_media(task/plot/type/time) | 平台 /media/page,照片墙数据源 | 🔵 | 读 |
-| 媒体取链 | get_media_link | 返回下载/预览链接,不搬文件 | 🔵 | 读 |
-| 相机覆盖计算 | get_camera_coverage | 平台按飞行参数算地面覆盖 GeoJSON——"这一趟拍全了没"直接落图 | 🔵 | 读 |
+| 媒体清单 | list_media(task/type/time/keyword) | 平台 /media/page,照片墙数据源（按拍摄时间倒序,现网 2348 文件） | ✅ | 读 |
+| 媒体取链 | get_media_link | /media/fileUrl 对象 URL,回落存档直链,不搬文件 | ✅ | 读 |
+| 相机覆盖计算 | get_camera_coverage(task_id) | 照片拍摄位姿元数据→平台覆盖算法（batch）→GeoJSON 落图;元数据缺失如实报告 | ✅ | 读 |
 | **举证有效性校验** | verify_evidence_coverage | 覆盖 GeoJSON×目标图斑求交（覆盖率%）+ 照片 EXIF 坐标/时间完整性——图斑举证规范要求照片带地理坐标与时间;覆盖不足自动建议补拍航线 | 🔵 | 读 |
-| 三维重建 | start_3d_modeling / get_modeling_status / get_modeling_result_link | WebODM:正射影像/三维模型;重资源任务要确认 | 🔵 | 🔒/读 |
-| 飞行录像归档 | list_flight_videos | 与直播域共用（missionId 维度） | 🟡 | 读 |
+| 三维重建 | start_3d_modeling | WebODM 正射/三维,重资源人在环;平台仅暴露 start,状态经返回体/成果库（status 独立接口在 webodm 服务侧,未经网关暴露） | ✅ | 🔒 |
+| 飞行录像归档 | list_flight_videos | /flight/video/list/{missionId}（仅 mission 维度,无按机查询） | ✅ | 读 |
 | 媒体归档目录 | list_media_folders | MediaFolder 树状归档（按任务/图斑组织照片墙的目录骨架） | ⚪ | 读 |
 | 媒体清单导出 | export_media_list | /media/export Excel | ⚪ | 读 |
 | 成果回传派单 | upload_dispatch_result | 对接 task-dispatch /results/upload（管理面联动） | ⚪ | 写 |
@@ -172,31 +175,31 @@
 | 电量续航 | check_battery | OSD 实时电量、续航预算 vs 任务时长、余量结论 | ✅ |
 | 航线避障 | check_route_obstacle | 仿地飞行/地形抬升/安全高度校验（平台算法已含,复核口径） | ✅ |
 | 机载避障 | check_drone_obstacle | 全向视觉避障自检（依赖机场在线） | ✅ |
-| 空域许可 | check_airspace | **当前为人工核实占位→A.2 上线后接真实围栏冲突** | ✅→🔵 |
+| 空域许可 | check_airspace | 真实围栏冲突检测（A.2 同源）：穿禁飞/限飞区 fail、超限高 fail、警告区 warn；UOM 申报仍提示人工确认 | ✅ |
 | 五项聚合 | preflight_check | 一次全查,overall 结论;有 fail 禁止发起起飞 | ✅ |
 | 机场自检项 | check_dock_readiness | 行业标准第六项（大疆机场起飞前自检同款）：舱内温湿度/风速雨量传感器/通信状态/舱盖状态——数据源 get_dock_environment,纳入 preflight_check 聚合 | 🟡 |
 | 平台天气红黄绿 | check_platform_weather | 平台 FlightWeatherController:红禁飞/黄人工确认/绿放行,含 confirm-and-publish——与我们人在环同构,可对接为第二气象源 | ⚪ |
 
-### A.2 空域与电子围栏（🔵 P0,uav-airspace-mcp）
+### A.2 空域与电子围栏（✅ 已上线 2026-07-20,uav-airspace-mcp:8206）
 
-| 细分功能 | 工具 | 说明 | 风险 |
-|---|---|---|---|
-| 围栏查询 | list_zones(type) | flyWorkZone 四类:禁飞区/限高区/限速区/警告区（与图斑同表不同 zoneType） | 读 |
-| 航线合规检测 | check_route_conflict(route_id) | 航线 WKT×围栏求交:穿禁飞区→fail+冲突多边形落图;超限高→顶回 | 读 |
-| 临时管制区 | create_zone(带过期) / delete_zone | "明天上午这片临时管制"→建区+受影响排期任务检出提醒 | 🔒 |
+| 细分功能 | 工具 | 说明 | 状态 | 风险 |
+|---|---|---|---|---|
+| 围栏查询 | list_zones(type/region) | flyWorkZone 管控区:禁飞区/限飞区/限高区/限速区/警告区（现网 54 条禁飞区） | ✅ | 读 |
+| 航线合规检测 | check_route_conflict(route_id) | 航线×围栏求交（本侧纯几何）:穿禁飞/限飞区→fail+冲突多边形落图;超限高→fail;警告区→warn | ✅ | 读 |
+| 临时管制区 | create_zone / delete_zone | "明天上午这片临时管制"→人在环建区;平台无过期字段,到期语义记 zoneConfig.expireAt 需人工删除 | ✅ | 🔒 |
 | **围栏下发设备** | sync_zone_to_devices | cloud-sdk flightAreasUpdate/Delete:围栏推到设备侧才真正生效（机上强制,不只平台记录）——create_zone 的必要后半步 | 🔒 |
 | 官方限飞区查询 | query_tsa_zones | cloud-sdk TSA 区域(大疆官方禁飞库),与自建围栏叠加检测 | 读 |
 | 围栏文件导入 | import_zone_file | GeoJSON/KML 批量导入 | 写 |
 
-### A.3 告警与设备健康（🔵 P0,uav-alert-mcp）
+### A.3 告警与设备健康（✅ 已上线 2026-07-20,uav-alert-mcp:8207）
 
-| 细分功能 | 工具 | 说明 | 风险 |
-|---|---|---|---|
-| 告警清单/详情 | list_alerts / get_alert_detail | 类型/等级(1普通2警告3严重)/时间/设备过滤 | 读 |
-| 告警处置 | handle_alert / ignore_alert | 处理/忽略+备注 | 写 |
-| 未处理计数 | get_unhandled_count | 值班视图入口 | 读 |
-| 设备健康 HMS | get_device_health | 大疆健康管理系统消息+在线状态+心跳+**电池循环次数/健康度**（OSD 电池信息）+UOM 登记状态——"这台机能不能飞"的依据 | 读 |
-| 失控行为查询/设置 | get/set_lost_action | 断联预案（4G 断联是无人值守场景高频故障）：失控时返航/悬停/降落,cloud-sdk property set;set 为高危 | 读/🔒 |
+| 细分功能 | 工具 | 说明 | 状态 | 风险 |
+|---|---|---|---|---|
+| 告警清单/详情 | list_alerts / get_alert_detail | 等级(0低1中2高3紧急,实体口径实测印证)/状态(0未处理1已处理2已忽略)/时间/设备过滤 | ✅ | 读 |
+| 告警处置 | handle_alert / ignore_alert | 处理/忽略+备注（仅未处理可操作;备注标注 Agent 来源） | ✅ | 写 |
+| 未处理计数 | get_unhandled_count | 值班视图入口（/unhandled/count/{workspaceId}） | ✅ | 读 |
+| 设备健康 HMS | get_device_health | 在线状态+OSD 实时电量+未读 HMS 健康消息+未处理告警数+结论——"这台机能不能飞"的依据 | ✅ | 读 |
+| 失控行为查询/设置 | get/set_lost_action | 断联预案（4G 断联是无人值守场景高频故障）：失控时返航/悬停/降落,cloud-sdk property set;set 为高危 | 🟡 | 读/🔒 |
 
 ### A.4 监管合规（新增,《无人驾驶航空器飞行管理暂行条例》2024.1 施行）
 
@@ -214,7 +217,8 @@
 |---|---|---|
 | confirm_token | 审批服务(8205)唯一签发;一次性/动作绑定/TTL 10min/重放拒绝;对话文本"我确认"不构成授权 | ✅ |
 | 确认卡片双前端 | GIS 前端(BFF)与 DeerFlow 原生 UI 均有卡片→批准→token 回传 | ✅ |
-| 紧急动作白名单⚡ | 返航/急停免 token+强审计+执行即播报（等确认反而危险） | 🟡 随操控域 |
+| 紧急动作白名单⚡ | 返航/急停免 token+强审计+执行即播报（等确认反而危险）;防注入三件套:前置条件（该机确有活动飞行才可调）+同机频率限制+注入反向用例（平台数据里的指令≠用户指令,见 05 §4.2） | 🟡 随操控域 |
+| 设备级操作锁 | dispatch_drone 锁机模式推广:同机同类写动作互斥（锁带 TTL）,横切调度/操控/debug 三域;写动作幂等（重试类重复调用只生效一次） | 🔵 随各写域 |
 | 拦截器 | guard 硬白名单+audit 审计落盘(token 打码) | ✅ |
 | Agent≤用户权限 | 登录态透传→平台 dataScope 过滤+菜单权限前置校验（ruoyi-system 对接） | ⚪ P2 |
 
@@ -235,6 +239,7 @@
 | 派单协作(uav-dispatch-order-mcp) | 建任务/MultiPolygon 自动拆子任务/指派🔒/群发抢单🔒/接拒单/成果上传/审核🔒/评价/流程日志 | task-dispatch 模块,多承接单位协同 |
 | 平台审批流(uav-workflow-mcp) | 发起(businessType=DRONE_TASK)/我的待办/批准🔒/驳回🔒/转办/加签/撤回/流程日志 | 自研引擎,DRONE_TASK_AUDIT_V1 已初始化;业务级审批,与操作级 confirm_token 双层不互替 |
 | 固件与资产(uav-ops-mcp) | 最新固件/发起升级🔒/升级进度/设备日志/设备注册🔒/绑定🔒 | 管理员画像 |
+| 审计查询(随 uav-ops-mcp) | list_audit_logs(actor/action/risk/time) | "昨天 Agent 执行了哪些高危动作"一句话可答;audit 拦截器已落盘,补查询入口,高危/⚡动作置顶 |
 | 消息通知(ruoyi-system) | 站内公告查询/发布🔒(SysNotice) | "给所有飞手发个通知";短信/邮件框架未接,IM 通道 M4 补 |
 
 ---
@@ -247,17 +252,18 @@
 | uav-route-planning-mcp | 8202 | 航线 | ✅ |
 | uav-preflight-mcp | 8203 | 安全面 A.1 | ✅ |
 | uav-flight-task-mcp | 8204 | 任务 + 飞行(起飞) + 成果(报告) | ✅ |
-| uav-airspace-mcp | 规划 | 安全面 A.2 | 🔵 |
-| uav-alert-mcp | 规划 | 安全面 A.3 | 🔵 |
-| uav-media-mcp | 规划 | 成果 | 🔵 |
-| uav-task-schedule-mcp | 规划 | 调度(时间) | 🔵 |
+| uav-airspace-mcp | 8206 | 安全面 A.2 | ✅ 2026-07-20 |
+| uav-alert-mcp | 8207 | 安全面 A.3 | ✅ 2026-07-20 |
+| uav-media-mcp | 8208 | 成果 | ✅ 2026-07-20 |
+| uav-task-schedule-mcp | 8209 | 调度(时间) | ✅ 2026-07-20 |
 | uav-live-mcp | 规划 | 直播 | 🟡 |
 | uav-flight-control-mcp | 规划 | 操控 + 飞行(干预) | 🟡 |
 | uav-dock-debug-mcp | 规划 | debug | 🟡 |
 | uav-recognition-mcp | 规划 | 智能面 | 🟠 |
 | uav-dispatch-order-mcp / uav-workflow-mcp / uav-ops-mcp | 规划 | 管理面 | ⚪ |
 
-统计：细分功能共 **约 100 项**,已上线 24 项;高危(🔒)约 35 项全部人在环,紧急白名单(⚡)仅 2 项。
+统计：细分功能共 **约 100 项**,已上线 **45 项**（2026-07-20 P0 四域落地：空域 3+告警 4+媒体 5+时间调度 9,含 check_airspace 由占位转真实）;高危(🔒)约 35 项全部人在环,紧急白名单(⚡)仅 2 项。
+P0 交付物含 `scripts/contract_smoke.py` 平台契约冒烟（§6.3 要求,19 项断言,演示前必跑）。
 
 ## 附录二：复核确认的边界（有意不做/暂不做）
 

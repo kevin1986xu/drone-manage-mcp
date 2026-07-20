@@ -35,6 +35,11 @@ PORTS = {
     "route-planning": int(os.getenv("PORT_ROUTE_PLANNING", "8202")),
     "preflight": int(os.getenv("PORT_PREFLIGHT", "8203")),
     "flight-task": int(os.getenv("PORT_FLIGHT_TASK", "8204")),
+    # 8205 为审批服务（uav_extensions.approval_service），新域从 8206 起
+    "airspace": int(os.getenv("PORT_AIRSPACE", "8206")),
+    "alert": int(os.getenv("PORT_ALERT", "8207")),
+    "media": int(os.getenv("PORT_MEDIA", "8208")),
+    "task-schedule": int(os.getenv("PORT_TASK_SCHEDULE", "8209")),
 }
 
 # ── Nacos 注册（可选；不配则只起服务不注册）──────────────────

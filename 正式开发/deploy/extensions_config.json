@@ -8,29 +8,73 @@
       "enabled": true,
       "type": "http",
       "url": "http://127.0.0.1:8201/mcp",
-      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
       "description": "无人机调度域：图斑查询、机场/无人机盘点与选机、无人机锁定（人在环）、批量核查排期（人在环）"
     },
     "uav-route-planning-mcp": {
       "enabled": true,
       "type": "http",
       "url": "http://127.0.0.1:8202/mcp",
-      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
       "description": "无人机航线域：图斑核查航线生成（平台图斑巡检算法+多图斑合并决策）、决策解释、人工编辑"
     },
     "uav-preflight-mcp": {
       "enabled": true,
       "type": "http",
       "url": "http://127.0.0.1:8203/mcp",
-      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
       "description": "无人机飞前检查域：气象/电量/航线避障/机载避障/空域五项检查与聚合结论"
     },
     "uav-flight-task-mcp": {
       "enabled": true,
       "type": "http",
       "url": "http://127.0.0.1:8204/mcp",
-      "headers": { "X-API-Key": "$UAV_MCP_API_KEY" },
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
       "description": "无人机飞行任务域：起飞指令（人在环确认）、任务状态查询"
+    },
+    "uav-airspace-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8206/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 空域与电子围栏域：禁飞区/限高区查询、航线围栏冲突检测、临时管制区创建删除（人在环）"
+    },
+    "uav-alert-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8207/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 告警与设备健康域：告警查询与处置、未处理计数、设备健康体检（在线/电量/HMS）"
+    },
+    "uav-media-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8208/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 媒体与成果域：任务照片/录像清单与取链、相机地面覆盖计算、三维重建（人在环）"
+    },
+    "uav-task-schedule-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8209/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 任务排期与调度域：排期建议（只算不写）、定时/循环任务、改期/取消/失败重试/断点续飞（全人在环）"
     }
   },
   "skills": {}

@@ -28,7 +28,7 @@ def build() -> FastMCP:
         batch_no: str | None = None,
         include_geometry: bool = False,
     ) -> dict[str, Any]:
-        """查询自然资源核查图斑（下发的疑似变化地块）。region 为行政区名；plot_ids 支持完整编号或尾号片段（如 00005），一次查询即可命中，严禁对同一编号反复查询。默认不返回边界几何（省上下文）；GIS 展示需要时传 include_geometry=true。"""
+        """查询自然资源核查图斑（下发的疑似变化地块）。region 为行政区名（如"汉川"）或行政区代码（如"420984"）；plot_ids 支持完整编号或尾号片段（如 00005），一次查询即可命中，严禁对同一编号反复查询。默认不返回边界几何（省上下文）；GIS 展示需要时传 include_geometry=true。"""
         return plots_core.query_plots(region, as_list(plot_ids), plot_type, as_list(date_range), batch_no, include_geometry)
 
     @mcp.tool()

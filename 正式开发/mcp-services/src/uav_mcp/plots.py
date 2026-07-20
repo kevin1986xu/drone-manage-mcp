@@ -15,6 +15,9 @@ logger = logging.getLogger(__name__)
 HYDRATE_TTL_S = 15.0
 _last_hydrate = 0.0
 
+# 单次查询最多返回的图斑数（防止大区域查询撑爆 LLM 上下文——光明区一个区就有 620 个图斑）
+MAX_RETURN = 50
+
 
 def hydrate() -> None:
     """真实图斑全量 → STATE.plots。失败抛 DroneManageError（工具层转错误返回）。
@@ -43,6 +46,7 @@ def _plot_view(p: dict[str, Any], include_geometry: bool) -> dict[str, Any]:
         "priority": p["priority"],
         "batch_no": p["batch_no"],
         "region": p["region"],
+        "area_code": p.get("area_code", "-"),
         "issued_at": p["issued_at"],
         "status": p["status"],
         "area_mu": p["area_mu"],
@@ -76,7 +80,12 @@ def query_plots(
             if p["plot_id"].upper() in wanted or any(w in p["plot_id"].upper() for w in wanted)
         ]
     if region:
-        items = [p for p in items if region.replace("区", "") in p["region"]]
+        # 行政区名模糊匹配（"汉川"命中"汉川市"）；纯数字视为行政区代码前缀匹配
+        # （平台区划码有 6 位与 12 位两种口径，"440311"命中"440311000000"）
+        if region.isdigit():
+            items = [p for p in items if str(p.get("area_code", "")).startswith(region)]
+        else:
+            items = [p for p in items if region.replace("区", "") in p["region"]]
     if plot_type:
         items = [p for p in items if plot_type in p["plot_type"]]
     if batch_no:
@@ -84,12 +93,20 @@ def query_plots(
     if date_range and len(date_range) == 2:
         lo, hi = date_range
         items = [p for p in items if lo <= p["issued_at"] <= hi]
-    views = [_plot_view(p, include_geometry) for p in items]
-    return {
-        "count": len(views),
-        "batch_no": views[0]["batch_no"] if views else None,
-        "plots": views,
+    items.sort(key=lambda p: p["issued_at"], reverse=True)  # 最新下发在前
+    matched = len(items)
+    out = {
+        "count": matched,
+        "batch_no": items[0]["batch_no"] if items else None,
+        "plots": [_plot_view(p, include_geometry) for p in items[:MAX_RETURN]],
     }
+    if matched > MAX_RETURN:
+        out["returned"] = MAX_RETURN
+        out["note"] = (
+            f"共命中 {matched} 个图斑，已按下发时间只返回最新 {MAX_RETURN} 个；"
+            "如需其余图斑请用 plot_type/date_range/batch_no 进一步缩小范围"
+        )
+    return out
 
 
 def get_plot(plot_id: str, include_geometry: bool = False) -> dict[str, Any] | None:

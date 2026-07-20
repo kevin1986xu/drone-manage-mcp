@@ -19,7 +19,16 @@ import uvicorn
 
 from uav_mcp import config
 from uav_mcp.auth import ApiKeyMiddleware
-from uav_mcp.servers import drone_dispatch, flight_task, preflight, route_planning
+from uav_mcp.servers import (
+    airspace,
+    alert,
+    drone_dispatch,
+    flight_task,
+    media,
+    preflight,
+    route_planning,
+    task_schedule,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 logger = logging.getLogger(__name__)
@@ -29,6 +38,10 @@ BUILDERS = {
     "route-planning": route_planning.build,
     "preflight": preflight.build,
     "flight-task": flight_task.build,
+    "airspace": airspace.build,
+    "alert": alert.build,
+    "media": media.build,
+    "task-schedule": task_schedule.build,
 }
 
 # 保持 naming client 引用（ref 模式 gRPC 长连接续活临时实例）
@@ -52,15 +65,20 @@ async def _serve_one(domain: str) -> None:
     server = uvicorn.Server(uvicorn.Config(app, host=config.MCP_HOST, port=port, log_level="warning"))
 
     async def _register() -> None:
-        await asyncio.sleep(1.5)  # 等 uvicorn 起监听
-        try:
-            from uav_mcp.nacos_registry import register_to_nacos
+        # 错峰：八域并发注册会在 VPN 慢链路上集体超时（2026-07-20 实测 7/8 失败），
+        # 按端口序号错开 + 失败退避重试
+        await asyncio.sleep(1.5 + (port - 8201) * 0.8)
+        from uav_mcp.nacos_registry import register_to_nacos
 
-            naming = await register_to_nacos(mcp, mcp.name, port)
-            if naming:
-                _keepalive.append(naming)
-        except Exception as exc:  # noqa: BLE001 —— 注册失败不拖垮服务
-            logger.error("Nacos 注册失败（MCP 服务继续运行）：%s", exc)
+        for attempt in range(3):
+            try:
+                naming = await register_to_nacos(mcp, mcp.name, port)
+                if naming:
+                    _keepalive.append(naming)
+                return
+            except Exception as exc:  # noqa: BLE001 —— 注册失败不拖垮服务
+                logger.error("Nacos 注册失败（第 %s/3 次，%s）：%r", attempt + 1, mcp.name, exc)
+                await asyncio.sleep(5 * (attempt + 1))
 
     reg = None
     if config.NACOS_SERVER_ADDR:

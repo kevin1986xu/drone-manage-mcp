@@ -29,8 +29,17 @@ from typing import Any
 
 logger = logging.getLogger(__name__)
 
-# 高危工具（与 mcp-services 的人在环工具一一对应）
-DANGEROUS_TOOLS = {"take_off", "dispatch_drone", "create_task_plan"}
+# 高危工具（与 mcp-services 的人在环工具一一对应；2026-07-20 随四新域扩充）
+DANGEROUS_TOOLS = {
+    "take_off", "dispatch_drone", "create_task_plan",
+    # airspace
+    "create_zone", "delete_zone",
+    # media
+    "start_3d_modeling",
+    # task-schedule
+    "create_scheduled_task", "create_recurring_task", "cancel_scheduled_task",
+    "reschedule_task", "retry_failed_task", "resume_from_breakpoint",
+}
 # 审批服务签发的 token 形态：secrets.token_urlsafe(24) → 32 位 url-safe
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{24,64}$")
 

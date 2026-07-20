@@ -64,7 +64,15 @@ def wkt_polygon_to_geojson(wkt: str) -> dict[str, Any] | None:
 class DroneManageClient:
     def __init__(self, base: str) -> None:
         self.base = base
-        self.http = httpx.Client(base_url=base, timeout=25)
+        # VPN 链路有阵发性丢包（2026-07-20 实测坏窗口新建连接失败率 ~25%）：
+        # retries=2 只重试连接建立阶段（幂等安全），吸收 SYN 级瞬断；
+        # keepalive 拉长到 60s，减少新建连接次数（httpx 默认 5s 一到就丢弃连接）
+        self.http = httpx.Client(
+            base_url=base,
+            timeout=25,
+            transport=httpx.HTTPTransport(retries=2),
+            limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=60),
+        )
 
     def _call(self, method: str, path: str, **kw) -> Any:
         try:
@@ -82,20 +90,35 @@ class DroneManageClient:
     # ── 图斑（FlyWorkZone，zoneType=图斑）───────────────────
 
     def list_plots(self) -> list[dict[str, Any]]:
-        body = self._call(
-            "POST", "/flyWorkZone/page",
-            json={"pageNum": 1, "pageSize": 100, "zoneType": "图斑"},
-        )
-        records = (body.get("data") or {}).get("records") or body.get("rows") or []
+        # 图斑量已到数千级（2026-07-20 平台数据迁移后 3500+）。首选单页拉全：
+        # 平台 SQL 仅按 create_time 排序，批量导入的同秒记录跨页顺序不稳定，
+        # 分页会漏行/重行（实测 620 条漏 105）；分页仅作服务端限制 pageSize 时的兜底
+        records: list[dict[str, Any]] = []
+        for page in range(1, 11):
+            body = self._call(
+                "POST", "/flyWorkZone/page",
+                json={"pageNum": page, "pageSize": 5000, "zoneType": "图斑"},
+            )
+            data = body.get("data") or {}
+            batch = data.get("records") or body.get("rows") or []
+            records.extend(batch)
+            total = data.get("total")
+            if not batch or (total is not None and len(records) >= total):
+                break
         plots = []
         for z in records:
-            if z.get("zoneType") != "图斑":
+            # 前缀匹配兼容历史命名（"图斑调查"曾与"图斑"并存，平台已统一但防反复）
+            if not (z.get("zoneType") or "").startswith("图斑"):
                 continue
             geometry = wkt_polygon_to_geojson(z.get("zoneGeometry") or "")
             if not geometry:
                 continue
             name = z.get("zoneName") or z.get("zoneId")
             ring = geometry["coordinates"][0]
+            # 区域优先取平台 areaName/areaCode 字段（zoneName 可能是 UUID，拆名不可靠）；
+            # /flyWorkZone/page 的 areaName/areaCode 查询参数线上未生效（实测 2026-07-20
+            # 传任意值均返回全量），过滤仍在客户端做，平台重新部署后可下沉服务端
+            region = z.get("areaName") or (name.split("-")[0] if "-" in name else "-")
             plots.append(
                 {
                     "plot_id": name,  # 业务编号（如 汉川市-土地规委会-20260626-00001），可读且唯一
@@ -103,7 +126,8 @@ class DroneManageClient:
                     "plot_type": z.get("zoneSource") or "图斑",
                     "priority": "高" if "执法" in (z.get("zoneSource") or "") else "中",
                     "batch_no": z.get("zoneSource") or "-",
-                    "region": name.split("-")[0] if "-" in name else "-",
+                    "region": region,
+                    "area_code": z.get("areaCode") or "-",
                     "issued_at": (z.get("createTime") or "")[:10],
                     "status": "待核查",
                     "area_mu": round(geo.polygon_area_m2(ring) / 666.67, 1),
@@ -282,6 +306,119 @@ class DroneManageClient:
 
     def cancel_flight_task(self, task_id: str) -> None:
         self._call("PUT", f"/api/tasks/cancel/{task_id}")
+
+    # ── 电子围栏（flyWorkZone，zoneType=禁飞区/限高区/…）──────
+
+    def list_zones(self, type_list: list[str] | None = None) -> list[dict[str, Any]]:
+        """非图斑类围栏全量（禁飞区/限飞区/限高区/限速区/警告区/特殊区域）。"""
+        payload: dict[str, Any] = {"pageNum": 1, "pageSize": 2000}
+        if type_list:
+            payload["typeList"] = type_list
+        body = self._call("POST", "/flyWorkZone/page", json=payload)
+        records = (body.get("data") or {}).get("records") or body.get("rows") or []
+        return [z for z in records if not (z.get("zoneType") or "").startswith("图斑")
+                and (not type_list or z.get("zoneType") in type_list)]
+
+    def create_zone(self, zone: dict[str, Any]) -> None:
+        """POST /flyWorkZone。zone 为 FlyWorkZone 驼峰字段（zoneGeometry 传 WKT）。"""
+        self._call("POST", "/flyWorkZone", json=zone)
+
+    def get_zone(self, zone_id: str) -> dict[str, Any] | None:
+        body = self._call("GET", f"/flyWorkZone/zoneId/{zone_id}")
+        return body.get("data") or None
+
+    def delete_zone(self, zone_id: str) -> None:
+        self._call("DELETE", f"/flyWorkZone/zoneId/{zone_id}")
+
+    # ── 告警与设备健康（DroneAlertController / HMS）──────────
+
+    def list_alerts(self, filters: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/alerts/list（TableDataInfo：rows/total）。"""
+        body = self._call("POST", "/api/alerts/list", json=filters)
+        return {"rows": body.get("rows") or [], "total": body.get("total") or 0}
+
+    def get_alert(self, alert_id: str) -> dict[str, Any] | None:
+        body = self._call("GET", f"/api/alerts/{alert_id}")
+        return body.get("data") or None
+
+    def handle_alert(self, alert_id: str, result: str) -> None:
+        self._call("PUT", f"/api/alerts/{alert_id}/handle", json={"handleResult": result})
+
+    def ignore_alert(self, alert_id: str) -> None:
+        self._call("PUT", f"/api/alerts/{alert_id}/ignore")
+
+    def alerts_unhandled_count(self) -> int:
+        body = self._call("GET", f"/api/alerts/unhandled/count/{config.DRONE_WORKSPACE_ID}")
+        return int(body.get("data") or 0)
+
+    def device_hms_unread(self, device_sn: str) -> list[dict[str, Any]]:
+        """单设备未读 HMS 健康消息。"""
+        body = self._call("GET", f"/devices/hms/devices/hms/{device_sn}")
+        return body.get("data") or []
+
+    # ── 媒体成果（MediaFileController / 覆盖计算 / WebODM / 飞行录像）──
+
+    def media_page(self, filters: dict[str, Any]) -> dict[str, Any]:
+        body = self._call("POST", "/media/page", json=filters)
+        return {"rows": body.get("rows") or [], "total": body.get("total") or 0}
+
+    def media_file_url(self, file_id: str) -> str | None:
+        body = self._call("GET", f"/media/fileUrl/{file_id}")
+        data = body.get("data")
+        return data if isinstance(data, str) else (data or {}).get("url")
+
+    def media_file_detail(self, file_id: str) -> dict[str, Any] | None:
+        body = self._call("GET", f"/media/file/{file_id}")
+        return body.get("data") or None
+
+    def coverage_calculate_batch(self, requests: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        body = self._call("POST", "/media/coverage/calculate/batch", json=requests, timeout=60)
+        return body.get("data") or []
+
+    def webodm_start(self, flight_task_id: str, process_type: str | None = None) -> dict[str, Any]:
+        params = {"processType": process_type} if process_type else None
+        body = self._call("POST", f"/media/webodm/modeling/{flight_task_id}/start",
+                          params=params, timeout=120)
+        return body.get("data") or {}
+
+    def flight_videos(self, mission_id: str) -> list[dict[str, Any]]:
+        body = self._call("GET", f"/flight/video/list/{mission_id}")
+        return body.get("data") or []
+
+    # ── 任务排期与调度（FlightTaskController 扩展面）──────────
+
+    def flight_tasks_query(self, filters: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/tasks/list（TableDataInfo：rows/total）。"""
+        body = self._call("POST", "/api/tasks/list", json=filters)
+        return {"rows": body.get("rows") or [], "total": body.get("total") or 0}
+
+    def wayline_jobs_search(self, filters: dict[str, Any]) -> list[dict[str, Any]]:
+        """POST /api/tasks/device/search 设备档期/作业查询（rows=WaylineJobDTO）。"""
+        body = self._call("POST", "/api/tasks/device/search", json=filters)
+        return body.get("rows") or []
+
+    def plan_new_task(self, task_id: str) -> Any:
+        """POST /api/tasks/planNewTask/{taskId} 平台自动重排期（不传时间）。"""
+        body = self._call("POST", f"/api/tasks/planNewTask/{task_id}", timeout=60)
+        return body.get("data")
+
+    def fail_task_retry(self, job_id: str) -> Any:
+        body = self._call("GET", f"/api/tasks/failTaskRetry/{job_id}", timeout=60)
+        return body.get("data")
+
+    def breakpoint_flight(self, job_id: str) -> Any:
+        body = self._call("GET", f"/api/tasks/breakPointFlight/{job_id}", timeout=60)
+        return body.get("data")
+
+    def optimize_route(self, task_id: str, min_height_above_terrain: float = 120.0) -> dict[str, Any]:
+        body = self._call("POST", f"/api/tasks/optimizeRoute/{task_id}",
+                          params={"minHeightAboveTerrain": min_height_above_terrain}, timeout=120)
+        return body.get("data") or {}
+
+    def create_scheduled_flight_task(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """POST /api/tasks 创建 scheduled/recurring 任务（payload 为 FlightTask 驼峰字段）。"""
+        self._call("POST", "/api/tasks", json=payload, timeout=120)
+        return self.get_flight_task(payload["taskId"])
 
     # ── 气象 ─────────────────────────────────────────────────
 

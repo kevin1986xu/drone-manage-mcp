@@ -38,3 +38,23 @@
 {"id": 38, "utterance": "本周把汉川市的图斑都飞完", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["create_task_plan"], "expected_args": {}}
 {"id": 39, "utterance": "帮我看下任务 T-0001 的成果报告", "expected_tools": ["get_task_report"]}
 {"id": 40, "utterance": "查一下历史飞行任务，最近飞过哪些", "expected_tools": ["list_task_history"]}
+{"id": 41, "utterance": "现在有什么告警？", "setup": [], "expected_tools": ["list_alerts"], "expected_args": {}}
+{"id": 42, "utterance": "有没有紧急级别的告警", "setup": [], "expected_tools": ["list_alerts"], "expected_args": {"list_alerts": {"level": "紧急"}}}
+{"id": 43, "utterance": "还有多少条告警没处理", "setup": [], "expected_tools": ["get_unhandled_count|list_alerts"], "expected_args": {}}
+{"id": 44, "utterance": "庙头镇那台机健康状况怎么样，能不能飞", "setup": [], "expected_tools": ["get_device_health"], "expected_args": {"get_device_health": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
+{"id": 45, "utterance": "第一条告警处理掉，备注：已到场检查恢复供电", "setup": ["现在有什么未处理的告警"], "expected_tools": ["handle_alert"], "expected_args": {}}
+{"id": 46, "utterance": "现在有哪些禁飞区？", "setup": [], "expected_tools": ["list_zones"], "expected_args": {"list_zones": {"zone_type": "禁飞"}}}
+{"id": 47, "utterance": "汉川范围内有没有飞行管控区域", "setup": [], "expected_tools": ["list_zones"], "expected_args": {"list_zones": {"region": "汉川"}}}
+{"id": 48, "utterance": "这条航线会不会穿到禁飞区？", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["check_route_conflict|check_airspace"], "expected_args": {}}
+{"id": 49, "utterance": "把变更调查00005这个图斑范围临时设为禁飞区，名字叫临时管制测试", "setup": ["查一下变更调查批次的图斑"], "expected_tools": ["create_zone"], "expected_args": {"create_zone": {"zone_type": "禁飞区"}}}
+{"id": 50, "utterance": "最近平台上拍了哪些照片", "setup": [], "expected_tools": ["list_media"], "expected_args": {}}
+{"id": 51, "utterance": "把第一张照片的下载链接给我", "setup": ["最近平台上拍了哪些照片"], "expected_tools": ["get_media_link"], "expected_args": {}}
+{"id": 52, "utterance": "第一个任务有没有飞行录像", "setup": ["查一下平台上最近的任务清单"], "expected_tools": ["list_flight_videos"], "expected_args": {}}
+{"id": 53, "utterance": "算一下这个任务照片的地面覆盖范围，看拍全了没", "setup": ["查一下平台上最近的任务清单"], "expected_tools": ["get_camera_coverage"], "expected_args": {}}
+{"id": 54, "utterance": "对交管-高速巡检那个任务的照片做一份正射影像", "setup": ["查一下平台上最近的任务清单"], "expected_tools": ["start_3d_modeling"], "expected_args": {}}
+{"id": 55, "utterance": "这批图斑下周飞完，帮我排一下，避开下雨天", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["suggest_schedule"], "expected_args": {}}
+{"id": 56, "utterance": "平台上未来有哪些已排的任务", "setup": [], "expected_tools": ["list_scheduled_tasks"], "expected_args": {}}
+{"id": 57, "utterance": "庙头镇的机这一周还排得下任务吗", "setup": [], "expected_tools": ["get_schedule_conflicts"], "expected_args": {"get_schedule_conflicts": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
+{"id": 58, "utterance": "把第一个待执行的任务挪到明天上午9点", "setup": ["平台上有哪些待执行的任务"], "expected_tools": ["reschedule_task"], "expected_args": {}}
+{"id": 59, "utterance": "查一下这台机的档期，里面失败的那个作业重试一下", "setup": ["庙头镇的机这周排了哪些作业"], "expected_tools": ["retry_failed_task|get_schedule_conflicts"], "expected_args": {}}
+{"id": 60, "utterance": "从明天起到月底，每天早上9点自动巡一遍这条航线", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["create_recurring_task"], "expected_args": {"create_recurring_task": {"execute_times": "09:00"}}}

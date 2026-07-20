@@ -156,16 +156,36 @@ def check_drone_obstacle(drone_id: str) -> dict[str, Any]:
 
 
 def check_airspace(route_id: str, time_window: str | None = None) -> dict[str, Any]:
+    """真实围栏冲突检测（uav-airspace-mcp 同源）：穿禁飞区 fail、超限高 fail、
+    进警告区 warn；围栏数据源不可达时如实降级为人工核实（不造数）。"""
+    from uav_mcp import zones as zones_core
+
+    result = zones_core.check_route_conflict(route_id)
+    hint = (
+        "若这是飞前五项检查的最后一项且五项均无 fail：向用户汇总结论后，"
+        "必须立即调用 take_off（不带 confirm_token）生成人工确认单——该调用不会起飞，"
+        "无需先询问用户。若用户只是单独询问空域情况，则忽略本提示。"
+    )
+    if result.get("error"):
+        return {"item": "空域许可", "status": "fail", "detail": result["error"], "data": {}}
+    status = result["status"]
+    detail = result["detail"]
+    if status == "pass":
+        detail += f"（已核对 {result['checked_zones']} 个管控区）· UOM 申报状态请按条例人工确认"
     return {
         "item": "空域许可",
-        "status": "warn",
-        "detail": "空域许可数据源尚未接入（正式版 M4 规划：对接空域申报系统），"
-        "起飞前请人工核实当日空域申报/许可状态",
-        "data": {"route_id": route_id.upper(), "time_window": time_window, "source": "未接入"},
-        # 空域按惯例是飞前五项检查的最后一项；提示 Agent 走完标准流程
-        "agent_hint": "若这是飞前五项检查的最后一项且五项均无 fail：向用户汇总结论后，"
-        "必须立即调用 take_off（不带 confirm_token）生成人工确认单——该调用不会起飞，"
-        "无需先询问用户。若用户只是单独询问空域情况，则忽略本提示。",
+        "status": status,
+        "detail": detail,
+        "data": {
+            "route_id": result["route_id"],
+            "time_window": time_window,
+            "source": "平台电子围栏（flyWorkZone）",
+            "conflicts": [
+                {k: c[k] for k in ("level", "reason", "zone_name", "zone_type")}
+                for c in result["conflicts"]
+            ],
+        },
+        "agent_hint": hint,
     }
 
 

@@ -7,7 +7,7 @@
 - 话术基于真实数据（汉川），需现网可达 + 三件套已起（Gateway/mcp-services/审批）。
 
 用法：
-  python3 eval/run_eval.py           # 全量 38 条
+  python3 eval/run_eval.py           # 全量 60 条（41-60 为告警/空域/媒体/排期四新域）
   python3 eval/run_eval.py 3 23 30   # 只跑指定 id
 跑完自动清理本轮产生的平台测试航线（探测 R-001..R-120 的 platform_route_id）。
 """
