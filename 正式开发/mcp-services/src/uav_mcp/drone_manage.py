@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import contextvars
 import logging
 import re
 from functools import lru_cache
@@ -26,6 +27,20 @@ from uav_mcp import config, geo
 logger = logging.getLogger(__name__)
 
 CRUISE_MS = 8.0
+
+# 回源身份透传（关三·P1，见 docs/07 §4.3）：拦截器/工具层把发起用户身份
+# 存入此上下文变量，DroneManageClient._call 自动注入平台请求头，
+# 平台据此做 dataScope 数据过滤。未设置则只带服务账号 token（或裸调）。
+_current_user_id: contextvars.ContextVar[str | None] = contextvars.ContextVar("uav_user_id", default=None)
+
+
+def set_platform_identity(user_id: str | None) -> contextvars.Token:
+    """设置当前调用链的平台用户身份（返回 token，用完 reset 复位）。"""
+    return _current_user_id.set(user_id)
+
+
+def reset_platform_identity(token: contextvars.Token) -> None:
+    _current_user_id.reset(token)
 
 
 class DroneManageError(RuntimeError):
@@ -74,7 +89,24 @@ class DroneManageClient:
             limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=60),
         )
 
+    def _auth_headers(self) -> dict[str, str]:
+        """回源鉴权头（关三，见 docs/07 §4.3）：服务账号 token + 透传用户身份。
+
+        两者都未配置时返回空 → 保持无头裸调（平台内网信任，向后兼容）。
+        """
+        headers: dict[str, str] = {}
+        if config.DRONE_PLATFORM_TOKEN:
+            headers["Authorization"] = f"Bearer {config.DRONE_PLATFORM_TOKEN}"
+        if config.DRONE_USER_ID_HEADER:
+            uid = _current_user_id.get()
+            if uid:
+                headers[config.DRONE_USER_ID_HEADER] = uid
+        return headers
+
     def _call(self, method: str, path: str, **kw) -> Any:
+        auth = self._auth_headers()
+        if auth:
+            kw["headers"] = {**auth, **(kw.get("headers") or {})}
         try:
             resp = self.http.request(method, path, **kw)
             resp.raise_for_status()

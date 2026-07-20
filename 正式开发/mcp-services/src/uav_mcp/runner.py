@@ -61,7 +61,7 @@ async def _serve_one(domain: str) -> None:
     mcp.settings.transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=False
     )
-    app = ApiKeyMiddleware(mcp.streamable_http_app(), config.UAV_MCP_API_KEY)
+    app = ApiKeyMiddleware(mcp.streamable_http_app(), config.UAV_MCP_API_KEY, config.UAV_TENANT_KEYS)
     server = uvicorn.Server(uvicorn.Config(app, host=config.MCP_HOST, port=port, log_level="warning"))
 
     async def _register() -> None:

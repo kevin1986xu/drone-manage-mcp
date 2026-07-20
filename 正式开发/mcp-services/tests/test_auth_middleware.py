@@ -46,3 +46,43 @@ async def test_healthz_exempt():
 async def test_no_key_configured_passes_with_warning():
     async with _client("") as c:
         assert (await c.post("/mcp")).status_code == 200
+
+
+# ── 多租户 key（关一，docs/07 §4.1）──────────────────────────
+
+async def _echo_tenant_app(scope, receive, send):
+    tenant = (scope.get("uav_tenant") or {}).get("tenant", "?")
+    body = tenant.encode()
+    await send({"type": "http.response.start", "status": 200,
+                "headers": [(b"content-type", b"text/plain")]})
+    await send({"type": "http.response.body", "body": body})
+
+
+def _tenant_client(tenant_keys, api_key=""):
+    app = ApiKeyMiddleware(_echo_tenant_app, api_key, tenant_keys)
+    return httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test")
+
+
+@pytest.mark.asyncio
+async def test_multi_tenant_routes_identity():
+    keys = {"key-a": {"tenant": "partner-a", "scopes": ["read"]},
+            "key-b": {"tenant": "gov", "scopes": ["*"]}}
+    async with _tenant_client(keys) as c:
+        assert (await c.post("/mcp", headers={"X-API-Key": "key-a"})).text == "partner-a"
+        assert (await c.post("/mcp", headers={"X-API-Key": "key-b"})).text == "gov"
+
+
+@pytest.mark.asyncio
+async def test_multi_tenant_unknown_key_401():
+    keys = {"key-a": {"tenant": "partner-a", "scopes": ["read"]}}
+    async with _tenant_client(keys) as c:
+        assert (await c.post("/mcp", headers={"X-API-Key": "nope"})).status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_single_key_coexists_as_default_tenant():
+    # 单 key 与多租户表并存：单 key 命中记为 default 租户
+    keys = {"key-a": {"tenant": "partner-a", "scopes": ["read"]}}
+    async with _tenant_client(keys, api_key="legacy-key") as c:
+        assert (await c.post("/mcp", headers={"X-API-Key": "legacy-key"})).text == "default"
+        assert (await c.post("/mcp", headers={"X-API-Key": "key-a"})).text == "partner-a"

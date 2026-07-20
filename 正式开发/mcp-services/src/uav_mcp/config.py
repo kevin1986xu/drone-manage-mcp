@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 
 from dotenv import load_dotenv
@@ -17,10 +18,32 @@ UAV_CREATE_REAL_TASK = os.getenv("UAV_CREATE_REAL_TASK", "0") == "1"
 # 是否真的下发计划到机场执行（= 真实起飞！），默认关；开启需现场安全审批
 UAV_REAL_PUBLISH = os.getenv("UAV_REAL_PUBLISH", "0") == "1"
 
-# ── 工具面鉴权（无 Higress 架构的治理口径）───────────────────
+# ── 工具面鉴权（关一·接入鉴权，见 docs/07 §4.1）──────────────
 # 消费方（DeerFlow extensions_config 的 headers）须带 X-API-Key: <该值>；
 # 未配置则不校验并打告警（仅限本机开发）。
 UAV_MCP_API_KEY = os.getenv("UAV_MCP_API_KEY", "").strip()
+# 多租户 key 表（JSON）：key → {tenant, scopes}，区分调用方并注入租户身份。
+# 与单 key 并存（单 key 作 default 租户兜底）。例：
+#   {"key-abc":{"tenant":"partner-a","scopes":["read"]},"key-xyz":{"tenant":"gov","scopes":["*"]}}
+def _load_tenant_keys() -> dict:
+    raw = os.getenv("UAV_TENANT_KEYS", "").strip()
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except (ValueError, TypeError):
+        return {}
+
+UAV_TENANT_KEYS = _load_tenant_keys()
+
+# ── 平台回源鉴权（关三，见 docs/07 §4.3）─────────────────────
+# 服务账号静态 token：配置后 DroneManageClient 回源默认带 Authorization: Bearer <该值>；
+# 未配置则保持无头裸调（平台当前内网信任、不校验——向后兼容）。
+DRONE_PLATFORM_TOKEN = os.getenv("DRONE_PLATFORM_TOKEN", "").strip()
+# 透传用户身份的请求头名（P1 用户级授权：拦截器把发起用户身份注入此头，
+# 平台据此做 dataScope 过滤）。默认空=不启用透传。
+DRONE_USER_ID_HEADER = os.getenv("DRONE_USER_ID_HEADER", "").strip()
 
 # ── 审批服务（uav_extensions.approval_service）───────────────
 # 配置后高危确认单/一次性 token 全部由独立审批服务签发与消费；
