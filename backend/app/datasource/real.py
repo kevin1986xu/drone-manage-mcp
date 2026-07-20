@@ -64,7 +64,15 @@ def wkt_polygon_to_geojson(wkt: str) -> dict[str, Any] | None:
 class DroneManageClient:
     def __init__(self, base: str) -> None:
         self.base = base
-        self.http = httpx.Client(base_url=base, timeout=25)
+        # VPN 链路有阵发性丢包（实测坏窗口新建连接失败率 ~25%）：
+        # retries=2 只重试连接建立阶段（幂等安全），吸收 SYN 级瞬断；
+        # keepalive 拉长到 60s，减少新建连接次数（httpx 默认 5s 一到就丢弃连接）
+        self.http = httpx.Client(
+            base_url=base,
+            timeout=25,
+            transport=httpx.HTTPTransport(retries=2),
+            limits=httpx.Limits(max_keepalive_connections=10, keepalive_expiry=60),
+        )
 
     def _call(self, method: str, path: str, **kw) -> Any:
         try:
@@ -82,20 +90,33 @@ class DroneManageClient:
     # ── 图斑（FlyWorkZone，zoneType=图斑）───────────────────
 
     def list_plots(self, region: str | None = None, keyword: str | None = None) -> list[dict[str, Any]]:
-        body = self._call(
-            "POST", "/flyWorkZone/page",
-            json={"pageNum": 1, "pageSize": 100, "zoneType": "图斑"},
-        )
-        records = (body.get("data") or {}).get("records") or body.get("rows") or []
+        # 图斑量已到数千级（2026-07-20 平台数据迁移后 3500+）。首选单页拉全：
+        # 平台 SQL 仅按 create_time 排序，批量导入的同秒记录跨页顺序不稳定，
+        # 分页会漏行/重行（实测 620 条漏 105）；分页仅作服务端限制 pageSize 时的兜底
+        records: list[dict[str, Any]] = []
+        for page in range(1, 11):
+            body = self._call(
+                "POST", "/flyWorkZone/page",
+                json={"pageNum": page, "pageSize": 5000, "zoneType": "图斑"},
+            )
+            data = body.get("data") or {}
+            batch = data.get("records") or body.get("rows") or []
+            records.extend(batch)
+            total = data.get("total")
+            if not batch or (total is not None and len(records) >= total):
+                break
         plots = []
         for z in records:
-            if z.get("zoneType") != "图斑":
+            # 前缀匹配兼容历史命名（"图斑调查"曾与"图斑"并存，平台已统一但防反复）
+            if not (z.get("zoneType") or "").startswith("图斑"):
                 continue
             geometry = wkt_polygon_to_geojson(z.get("zoneGeometry") or "")
             if not geometry:
                 continue
             name = z.get("zoneName") or z.get("zoneId")
-            if region and region.replace("区", "").replace("市", "").replace("县", "") not in name:
+            # 区域优先取平台 areaName 字段（zoneName 可能是 UUID，拆名不可靠）
+            area_name = z.get("areaName") or (name.split("-")[0] if "-" in name else "-")
+            if region and region.replace("区", "").replace("市", "").replace("县", "") not in f"{area_name}{name}":
                 continue
             if keyword and keyword not in name:
                 continue
@@ -107,7 +128,8 @@ class DroneManageClient:
                     "plot_type": z.get("zoneSource") or "图斑",
                     "priority": "高" if "执法" in (z.get("zoneSource") or "") else "中",
                     "batch_no": z.get("zoneSource") or "-",
-                    "region": name.split("-")[0] if "-" in name else "-",
+                    "region": area_name,
+                    "area_code": z.get("areaCode") or "-",
                     "issued_at": (z.get("createTime") or "")[:10],
                     "status": "待核查",
                     "area_mu": round(geo.polygon_area_m2(ring) / 666.67, 1),

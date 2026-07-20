@@ -9,6 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
+from app import datasource
 from app.core import geo, plots
 from app.core.store import STORE
 from app.datasource import get_real
@@ -18,15 +19,20 @@ logger = logging.getLogger(__name__)
 STATUS_CN = {"idle": "空闲", "dispatched": "已锁定", "flying": "任务中", "maintenance": "维保", "offline": "离线"}
 
 
-def _hydrate_from_real() -> bool:
+def _hydrate_from_real() -> str:
+    """真实设备 → STORE.drones。返回 real / cached / mock（语义同 plots）。"""
     real = get_real()
     if not real:
-        return False
+        return "mock"
     try:
         docks = real.list_docks()
     except Exception as exc:  # noqa: BLE001
-        logger.warning("真实设备接口失败，回落 mock：%s", exc)
-        return False
+        if datasource.real_succeeded_before():
+            logger.warning("真实设备接口失败，沿用上次真实快照：%s", exc)
+            return "cached"
+        logger.warning("真实设备接口失败且本进程从未连通平台，回落 mock：%s", exc)
+        return "mock"
+    datasource.note_real_success()
     old = STORE.drones
     STORE.drones = {}
     for d in docks:
@@ -36,7 +42,7 @@ def _hydrate_from_real() -> bool:
         d.setdefault("firmware", "-")
         d.setdefault("obstacle_avoidance", True)
         STORE.drones[d["drone_id"]] = d
-    return True
+    return "real"
 
 
 def _enrich_battery(d: dict[str, Any]) -> None:
@@ -98,8 +104,12 @@ def find_nearby_drones(
         图斑为参照集，无人机落在任一图斑 radius 内即纳入，距离取到最近图斑，
         并标注离哪个图斑最近。
     """
-    _hydrate_from_real()
-    plots._hydrate_from_real()  # 确保图斑参照也是真实数据（可能未经 query_plots 直接进入）
+    drone_src = _hydrate_from_real()
+    plot_src = plots._hydrate_from_real()  # 确保图斑参照也是真实数据（可能未经 query_plots 直接进入）
+    stale_hint = (
+        "图斑清单可能已更新（数据源或平台数据变化），请重新调用 query_plots "
+        "获取最新图斑编号后再查询，不要用同一批旧编号重试"
+    )
     # refs: [(label, [lon, lat]), ...]
     if plot_ids:
         refs = []
@@ -108,11 +118,11 @@ def find_nearby_drones(
             if p:
                 refs.append((p["plot_id"], p["centroid"]))
         if not refs:
-            return {"error": f"目标图斑不存在：{', '.join(plot_ids)}", "drones": []}
+            return {"error": f"目标图斑不存在：{', '.join(plot_ids)}", "hint": stale_hint, "drones": []}
     elif plot_id:
         p = plots.get_plot(plot_id)
         if not p:
-            return {"error": f"图斑 {plot_id} 不存在", "drones": []}
+            return {"error": f"图斑 {plot_id} 不存在", "hint": stale_hint, "drones": []}
         refs = [(p["plot_id"], p["centroid"])]
     elif location and location.get("coordinates"):
         refs = [("指定位置", location["coordinates"])]
@@ -166,6 +176,7 @@ def find_nearby_drones(
         "reference_plot_count": len(refs) if multi else 1,
         "count": len(drones_out),
         "drones": drones_out,
+        **datasource.source_meta(drone_src, plot_src),
     }
     if note:
         out["note"] = note
@@ -173,10 +184,10 @@ def find_nearby_drones(
 
 
 def get_drone_status(drone_id: str) -> dict[str, Any]:
-    _hydrate_from_real()
+    source = _hydrate_from_real()
     d = _find(drone_id)
     if not d:
-        return {"error": f"无人机 {drone_id} 不存在"}
+        return {"error": f"无人机 {drone_id} 不存在", **datasource.source_meta(source)}
     _enrich_battery(d)
     v = _drone_view(d)
     v.update(
