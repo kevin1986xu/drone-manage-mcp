@@ -15,7 +15,14 @@
 2. **改注册 IP 并重启 mcp-services**：
    - `正式开发/mcp-services/.env` → `MCP_SERVICE_IP=<新 IP>`
    - 重启 runner（kill 用 `lsof -ti TCP:8201 -sTCP:LISTEN`,别不带 -sTCP:LISTEN——会误杀桥/BFF）
+   - 现为**八域**（8201-8204 + 8206-8209）；Nacos 并发注册在 VPN 上会集体超时,
+     runner 已按端口错峰+退避重试,等日志里"已注册/已更新"两词合计 8 条再进下一步
 3. **起 nacos_bridge**（它会自动把 DeerFlow 配置跟到新 IP,不用手改 extensions_config.json）。
+4. **跑平台契约冒烟**（接口漂移早发现——平台侧仍在活跃迭代）：
+   ```bash
+   cd 正式开发/mcp-services && PYTHONPATH=src .venv/bin/python scripts/contract_smoke.py
+   ```
+   19 项断言全绿再继续；任一红项说明平台接口变了,当场排查别硬演。
 
 ## 二、起服务（顺序）与验证
 
@@ -23,10 +30,10 @@
 |---|---|---|---|
 | 1 | 演示版后端 `cd backend && uv run uvicorn app.main:app --port 8000` | 8000 | `curl localhost:8000/api/config` → **必须 `"agent_mode":"llm"`**（scripted 说明 .env 的 LLM_API_KEY 没生效或带了 override） |
 | 2 | 演示版前端 `cd frontend && npm run dev` | 5173 | 浏览器打开,地图右上角**不能**出现"Canvas 2D(降级)"——见"真机 WebGL"节 |
-| 3 | mcp-services（见上一节,已起） | 8201-8204 | `for p in 8201 8202 8203 8204; do curl -m 3 localhost:$p/healthz; done` |
+| 3 | mcp-services（见上一节,已起） | 8201-04 + 8206-09 | `for p in 8201 8202 8203 8204 8206 8207 8208 8209; do curl -m 3 localhost:$p/healthz; done` 八个全 ok |
 | 4 | 审批服务 | 8205 | `curl localhost:8205/healthz` |
-| 5 | nacos_bridge（已起） | — | 日志出现"已同步 4 个 server 到 DeerFlow" |
-| 6 | DeerFlow Gateway | 8001 | `curl -X POST localhost:8001/api/threads -d '{}' -H 'Content-Type: application/json'` 返回 thread_id;**日志无 `Skipping MCP server`**（有=工具发现失败,重启 Gateway） |
+| 5 | nacos_bridge（已起） | — | 日志出现"已同步 8 个 server 到 DeerFlow" |
+| 6 | DeerFlow Gateway | 8001 | `curl -X POST localhost:8001/api/threads -d '{}' -H 'Content-Type: application/json'` 返回 thread_id;日志 **`loaded 45 tool(s)`**（八域全发现）且**无 `Skipping MCP server`**（有=工具发现失败,重启 Gateway） |
 | 7 | BFF | 8300 | `curl localhost:8300/api/config` → `"agent_mode":"deerflow"` |
 | 8 | DeerFlow 前端（可选,平台化环节用） `pnpm exec next dev --webpack` | 3000 | 首次要 /setup 建管理员账号;**必须 --webpack**（Turbopack 中文路径 panic） |
 
@@ -54,7 +61,13 @@
 1. 演示版主线:查图斑 → 周边无人机 → GM-04 规划(合并叙事) → 飞前检查 → 确认卡片起飞 → 遥测 → 编辑器手动调整。
 2. 批量排期:"把这些图斑按优先级排期,本周飞完,每天不超过3架" → 排期表 → 确认执行第 1 天。
 3. 平台化环节(可选):3000 端口 DeerFlow 原生界面,一句话全流程 + 原生确认卡片。
-4. 兜底预案:**现场断网/LLM 挂** → 演示版后端以 `AGENT_MODE=scripted` 重启(秒级响应、可脱网,38 条话术全兜底);**演完必须不带 override 重启回 llm**。
+4. **P0 四新域串场（正式版新增能力,一条自然对话线）**：
+   "现在有什么告警" → "庙头镇那台机健康状况怎么样" → "这条航线会不会穿禁飞区" →
+   "这批图斑下周飞完帮我排一下避开下雨天" → "这次任务拍了哪些照片"。
+   注意:告警/排期/照片墙在 GIS 前端(8300)是**文本兜底**(无专用可视化指令),
+   若要落图效果走 3000 或口头带过;`create_scheduled_task` 落库需 `UAV_CREATE_REAL_TASK=1`,
+   演示排期建议(suggest_schedule 只算不写)不需要开,**真落定时任务才需要,谨慎**。
+5. 兜底预案:**现场断网/LLM 挂** → 演示版后端以 `AGENT_MODE=scripted` 重启(秒级响应、可脱网,38 条话术全兜底);**演完必须不带 override 重启回 llm**。
 
 ## 六、撤场
 
