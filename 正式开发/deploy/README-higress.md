@@ -28,11 +28,21 @@ docker compose -f higress-standalone.docker-compose.yml up -d
 
 浏览器打开 `http://localhost:8888`：
 
-1. **初始化管理员账号**（首次访问，Higress 要求设一个控制台账号）。
-2. **服务来源**：新增 Nacos 类型来源 → 地址 `192.168.101.21:8998`、用户名 `nacos`、
-   密码 `Geostar2025!`、命名空间 `public`。保存后应能发现 8 个 `uav-*-mcp` 服务。
-3. **MCP 路由/聚合**：为 8 个域各建（或用 MCP 聚合）到 Nacos 服务的路由，前缀区分域；
-   Higress 从 Nacos MCP Registry 拉工具清单对外暴露。
+0. **⚠ 先注册普通服务实例（关键前置，否则「创建 MCP 服务」的后端服务下拉是空的）**：
+   mcp-services 只注册在 Nacos **MCP Registry（ai/mcp）**，而 Higress v2.2.3「创建
+   MCP 服务 → 后端服务」读的是**普通服务列表（ns/instance）**，两套注册面不通。
+   跑一次补注册（Nacos 3.2.1 只认 v3/admin/ns/instance，v1 报 501、v2 报 404）：
+   ```bash
+   cd mcp-services && PYTHONPATH=src .venv/bin/python scripts/register_gateway_instances.py
+   ```
+   注册 8 个 persistent 普通实例（IP=MCP_SERVICE_IP，Higress 容器可达的宿主 en0；
+   IP 变更后重跑）。Nacos 普通服务列表随即出现 8 个纯名 `uav-*-mcp`。
+1. **初始化管理员账号**（首次访问，Higress 要求设一个控制台账号；本环境 admin/Geostar2025!）。
+2. **服务来源**：新增 Nacos3 类型来源 → 地址 `192.168.101.21:8998`、用户名 `nacos`、
+   密码 `Geostar2025!`、命名空间 `public`。保存后「服务列表」出现 8 个 `uav-*-mcp`。
+3. **创建 MCP 服务**（AI 网关管理 → MCP 管理 → 创建 MCP 服务）：服务类型
+   `streamable-http`、路径 `/mcp`、**后端服务**下拉选纯名 `uav-*-mcp`（非 ::0.1.0 后缀的）；
+   对外访问 `http://<HOST>:8080/mcp-servers/<服务名>`，后端地址端口对消费方隐藏。
 4. **消费者鉴权**（关一多租户）：建消费者 → 分配 key（对应 mcp-services 的
    `UAV_TENANT_KEYS` 租户），在路由上启用 key-auth / JWT 插件。
 5. **限流 + 审计**：按消费者配速率；开访问日志。
