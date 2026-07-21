@@ -22,7 +22,7 @@
 - [x] 同步桥 Nacos 拉取侧：从现网 registry 解析出全部四个 uav-* server 及端点
 - [x] 拦截器接口对 DeerFlow 2.0 源码核实 + 单测 12/12（guard 放行/短路、审计打码）
 
-## P1 对话→MCP 链路（待跑）
+## P1 对话→MCP 链路（✅ 已过，步骤留档）
 
 1. 起三件套：
    ```bash
@@ -33,7 +33,7 @@
 3. Web UI 对话："查一下图斑，然后给 00005 规划航线"。
 4. 通过标准：工具直见且命中正确（对照演示版 91% 口径）；链路完整跑通。
 
-## P2 高危确认体验（最关键，待跑）
+## P2 高危确认体验（最关键，✅ 已过，步骤留档）
 
 1. 对话推进到起飞 → take_off 无 token 自拒，观察 DeerFlow 前端如何呈现
    requires_confirmation 返回（确认单摘要 rows 是否可读）。
@@ -46,16 +46,16 @@
 5. 通过标准：确认语义清晰、误触发风险可接受、拒绝路径正确；
    若原生呈现不达标 → 评估 M3 BFF 确认卡片的优先级提级。
 
-## P3 单轮延迟（待跑）
+## P3 单轮延迟（✅ 已过，步骤留档）
 
 同一话术在演示版与 DeerFlow 各跑 5 次，P50 劣化 ≤2 倍且绝对值不冷场。
 
-## P4 Nacos 动态发现（待跑）
+## P4 Nacos 动态发现（✅ 已过，步骤留档）
 
 起 nacos_bridge → 停/起一个域 → 观察 DeerFlow /api/mcp/config 自动增删；
 另配 nacos-mcp-router（router 模式）验证长尾 search→use_tool。
 
-## P5 Skill 化（待跑）
+## P5 Skill 化（✅ 已过，步骤留档）
 
 skills/plot-inspection 挂载后，对话观察模型是否按 skill 流程编排（选机必传 plot_ids、
 检查完无 fail 立即 take_off 不追问）。
