@@ -6,7 +6,7 @@
 {"id": 6, "utterance": "这些图斑周边有哪些无人机可以用？", "setup": ["查一下现在的待核查图斑"], "expected_tools": ["find_nearby_drones"], "expected_args": {}}
 {"id": 7, "utterance": "调度一下00005附近的无人机", "setup": ["查一下变更调查批次的图斑"], "expected_tools": ["find_nearby_drones"], "expected_args": {}}
 {"id": 8, "utterance": "周边有没有能用的飞机", "setup": [], "expected_tools": ["find_nearby_drones"], "expected_args": {}}
-{"id": 9, "utterance": "庙头镇那台机场现在什么状态", "setup": [], "expected_tools": ["get_drone_status"], "expected_args": {"get_drone_status": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
+{"id": 9, "utterance": "庙头镇那台机场现在什么状态", "setup": [], "expected_tools": ["get_drone_status|get_dock_environment|get_device_health"], "expected_args": {"get_drone_status": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
 {"id": 10, "utterance": "看下下辛店镇国土所的机场电量还剩多少", "setup": [], "expected_tools": ["get_drone_status"], "expected_args": {"get_drone_status": {"drone_id": "下辛店"}}}
 {"id": 11, "utterance": "用庙头镇的无人机给这几个图斑规划航线", "setup": ["查一下变更调查批次的图斑"], "expected_tools": ["generate_route"], "expected_args": {"generate_route": {"drone_id": "庙头|7CTXN6T00B0C98"}}}
 {"id": 12, "utterance": "规划一条能覆盖这些图斑的航线", "setup": ["查一下变更调查批次的图斑", "这些图斑附近有哪些无人机"], "expected_tools": ["generate_route"], "expected_args": {}}
@@ -20,7 +20,7 @@
 {"id": 20, "utterance": "这条航线是怎么考虑的？", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
 {"id": 21, "utterance": "为啥一条航线要覆盖这么多图斑", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
 {"id": 22, "utterance": "给我解释下这个航线的逻辑", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["explain_route"], "expected_args": {}}
-{"id": 23, "utterance": "我要起飞", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather", "take_off"], "expected_args": {}}
+{"id": 23, "utterance": "我要起飞", "setup": ["查一下变更调查批次的图斑", "用下辛店镇国土所的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather", "take_off"], "expected_args": {}}
 {"id": 24, "utterance": "可以飞了吗？", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather"], "expected_args": {}}
 {"id": 25, "utterance": "起飞前帮我检查一下", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["preflight_check|check_weather"], "expected_args": {}}
 {"id": 26, "utterance": "现在天气适合飞吗", "setup": [], "expected_tools": ["check_weather"], "expected_args": {}}
@@ -59,8 +59,8 @@
 {"id": 59, "utterance": "查一下这台机的档期，里面失败的那个作业重试一下", "setup": ["庙头镇的机这周排了哪些作业"], "expected_tools": ["retry_failed_task|get_schedule_conflicts"], "expected_args": {}}
 {"id": 60, "utterance": "从明天起到月底，每天早上9点自动巡一遍这条航线", "setup": ["查一下变更调查批次的图斑", "用庙头镇的无人机给00005规划航线"], "expected_tools": ["create_recurring_task"], "expected_args": {"create_recurring_task": {"execute_times": "09:00"}}}
 {"id": 61, "utterance": "用庙头镇的无人机飞00005，检查没问题就起飞", "setup": ["查一下汉川的待核查图斑"], "expected_tools": ["preflight_check|check_route_conflict"], "expected_args": {}}
-{"id": 62, "utterance": "让我看看下辛店镇国土所那台机的画面", "setup": [], "expected_tools": ["start_live"], "expected_args": {}}
-{"id": 63, "utterance": "画面太卡了", "setup": ["让我看看下辛店镇国土所那台机的画面"], "expected_tools": ["set_live_quality"], "expected_args": {}}
+{"id": 62, "utterance": "让我看看下辛店镇国土所那台机的画面", "setup": [], "expected_tools": ["start_live|get_live_capacity"], "expected_args": {}}
+{"id": 63, "utterance": "把下辛店镇国土所那台机的直播画质调成流畅", "setup": [], "expected_tools": ["set_live_quality"], "expected_args": {}}
 {"id": 64, "utterance": "切到红外镜头", "setup": ["让我看看下辛店镇国土所那台机的画面"], "expected_tools": ["switch_camera"], "expected_args": {}}
 {"id": 65, "utterance": "不看了，关掉直播", "setup": ["让我看看下辛店镇国土所那台机的画面"], "expected_tools": ["stop_live"], "expected_args": {}}
 {"id": 66, "utterance": "昨天下午两点到三点庙头镇那台机的飞行数据给我看看", "setup": [], "expected_tools": ["get_telemetry_history"], "expected_args": {}}

@@ -6,8 +6,8 @@
   "called": [
    "query_plots"
   ],
-  "elapsed_s": 21.5,
-  "thread": "8dfb0ec9-6135-4540-8f1a-7c084b4f2828"
+  "elapsed_s": 21.2,
+  "thread": "batch1"
  },
  {
   "id": 2,
@@ -16,8 +16,8 @@
   "called": [
    "query_plots"
   ],
-  "elapsed_s": 18.8,
-  "thread": "705b5ffb-7486-4a91-9a55-4e2b1ee035d2"
+  "elapsed_s": 20.2,
+  "thread": "batch1"
  },
  {
   "id": 3,
@@ -27,8 +27,8 @@
    "query_plots",
    "query_plots"
   ],
-  "elapsed_s": 17.3,
-  "thread": "7cb8ad84-1800-40f3-95a2-05a5cd3ea072"
+  "elapsed_s": 15.2,
+  "thread": "batch1"
  },
  {
   "id": 4,
@@ -37,8 +37,8 @@
   "called": [
    "query_plots"
   ],
-  "elapsed_s": 19.9,
-  "thread": "6c3f0180-fdd1-4c09-bd8d-19666f1e48c0"
+  "elapsed_s": 17.1,
+  "thread": "batch1"
  },
  {
   "id": 5,
@@ -48,8 +48,8 @@
    "query_plots",
    "query_plots"
   ],
-  "elapsed_s": 14.7,
-  "thread": "5a976d7c-39e1-4f7d-a486-04459d08fa92"
+  "elapsed_s": 15.6,
+  "thread": "batch1"
  },
  {
   "id": 6,
@@ -58,16 +58,19 @@
   "called": [
    "find_nearby_drones"
   ],
-  "elapsed_s": 17.6,
-  "thread": "a2d34ab0-d9ed-4a04-b0e0-7decc08e30a6"
+  "elapsed_s": 18.0,
+  "thread": "batch1"
  },
  {
   "id": 7,
-  "hit": false,
+  "hit": true,
   "args_ok": true,
-  "called": [],
-  "elapsed_s": 5.2,
-  "thread": "d321c447-4188-43ec-b1a1-4c2cc925c777"
+  "called": [
+   "find_nearby_drones",
+   "get_drone_status"
+  ],
+  "elapsed_s": 17.1,
+  "thread": "batch1"
  },
  {
   "id": 8,
@@ -75,21 +78,21 @@
   "args_ok": true,
   "called": [
    "find_nearby_drones",
-   "get_device_health",
    "read_file"
   ],
-  "elapsed_s": 45.1,
-  "thread": "8133473e-776e-42e7-9c43-3368dc846336"
+  "elapsed_s": 42.0,
+  "thread": "batch1"
  },
  {
   "id": 9,
   "hit": true,
   "args_ok": true,
   "called": [
-   "get_drone_status"
+   "get_drone_status",
+   "get_dock_environment"
   ],
-  "elapsed_s": 9.2,
-  "thread": "3184af80-522c-44c3-9970-9cbec92649e7"
+  "elapsed_s": 17.7,
+  "thread": "retry"
  },
  {
   "id": 10,
@@ -99,8 +102,8 @@
    "get_drone_status",
    "get_device_health"
   ],
-  "elapsed_s": 11.1,
-  "thread": "ab36aaa5-5afc-41ca-bc0b-8e16e29b5bc1"
+  "elapsed_s": 13.8,
+  "thread": "batch1"
  },
  {
   "id": 11,
@@ -108,20 +111,22 @@
   "args_ok": true,
   "called": [
    "find_nearby_drones",
+   "get_drone_status",
    "generate_route"
   ],
-  "elapsed_s": 31.6,
-  "thread": "a7c6a37a-f464-4c0e-8098-62daf5b1d1df"
+  "elapsed_s": 28.3,
+  "thread": "batch1"
  },
  {
   "id": 12,
   "hit": true,
   "args_ok": true,
   "called": [
-   "generate_route"
+   "generate_route",
+   "explain_route"
   ],
-  "elapsed_s": 20.1,
-  "thread": "c005baa5-bee9-450b-a8e2-6121c0c45660"
+  "elapsed_s": 25.0,
+  "thread": "batch1"
  },
  {
   "id": 13,
@@ -130,8 +135,8 @@
   "called": [
    "generate_route"
   ],
-  "elapsed_s": 24.7,
-  "thread": "2064adf4-5a0a-40fa-9338-55b045cd3cd3"
+  "elapsed_s": 19.5,
+  "thread": "batch1"
  },
  {
   "id": 14,
@@ -140,8 +145,8 @@
   "called": [
    "open_route_editor"
   ],
-  "elapsed_s": 5.8,
-  "thread": "6a644699-f944-4df6-a83e-12e8672e841b"
+  "elapsed_s": 7.1,
+  "thread": "batch1"
  },
  {
   "id": 15,
@@ -150,8 +155,8 @@
   "called": [
    "open_route_editor"
   ],
-  "elapsed_s": 8.1,
-  "thread": "6889dae4-e702-4456-83b4-18b9c213b603"
+  "elapsed_s": 6.1,
+  "thread": "batch1"
  },
  {
   "id": 16,
@@ -160,8 +165,8 @@
   "called": [
    "open_route_editor"
   ],
-  "elapsed_s": 6.5,
-  "thread": "92fe3630-dc63-4228-b425-d9bf193211ee"
+  "elapsed_s": 6.8,
+  "thread": "batch1"
  },
  {
   "id": 17,
@@ -170,8 +175,8 @@
   "called": [
    "get_route_detail"
   ],
-  "elapsed_s": 6.4,
-  "thread": "60c1e8f8-90b0-4e0c-94c8-3479dcdfd6d8"
+  "elapsed_s": 7.3,
+  "thread": "batch1"
  },
  {
   "id": 18,
@@ -180,8 +185,8 @@
   "called": [
    "get_route_detail"
   ],
-  "elapsed_s": 35.0,
-  "thread": "ec281cf4-5029-4e8e-bd6c-2c05e2ba2072"
+  "elapsed_s": 34.4,
+  "thread": "batch1"
  },
  {
   "id": 19,
@@ -190,8 +195,8 @@
   "called": [
    "explain_route"
   ],
-  "elapsed_s": 14.9,
-  "thread": "3fa7e7a1-7826-4b22-ac8a-bb339992b64c"
+  "elapsed_s": 13.5,
+  "thread": "batch1"
  },
  {
   "id": 20,
@@ -200,8 +205,8 @@
   "called": [
    "explain_route"
   ],
-  "elapsed_s": 13.8,
-  "thread": "d8b9e127-7236-4c80-85cd-b3c0dbca115d"
+  "elapsed_s": 13.9,
+  "thread": "batch1"
  },
  {
   "id": 21,
@@ -210,8 +215,8 @@
   "called": [
    "explain_route"
   ],
-  "elapsed_s": 11.9,
-  "thread": "b4ea4e9b-e721-40c3-913a-d76cc211a5ef"
+  "elapsed_s": 13.7,
+  "thread": "batch1"
  },
  {
   "id": 22,
@@ -220,8 +225,8 @@
   "called": [
    "explain_route"
   ],
-  "elapsed_s": 16.1,
-  "thread": "1ad51d85-5d0b-4bcb-b38a-1aee9b3c01fa"
+  "elapsed_s": 17.6,
+  "thread": "retry"
  },
  {
   "id": 23,
@@ -229,31 +234,32 @@
   "args_ok": true,
   "called": [
    "preflight_check",
+   "take_off",
    "take_off"
   ],
-  "elapsed_s": 21.5,
-  "thread": "35417594-f74e-4943-893f-6136e5f52090"
+  "elapsed_s": 19.2,
+  "thread": "4ca0fd5e-72ba-442e-a4af-0ac489f8c188"
  },
  {
   "id": 24,
   "hit": true,
   "args_ok": true,
   "called": [
+   "generate_route",
    "preflight_check"
   ],
-  "elapsed_s": 15.1,
-  "thread": "1cf65e34-b16f-4846-b0bd-faeed998d374"
+  "elapsed_s": 23.1,
+  "thread": "batch1"
  },
  {
   "id": 25,
   "hit": true,
   "args_ok": true,
   "called": [
-   "get_route_detail",
    "preflight_check"
   ],
-  "elapsed_s": 21.4,
-  "thread": "9c40e976-c70f-469e-9aa3-4911b9d35b58"
+  "elapsed_s": 16.1,
+  "thread": "batch1"
  },
  {
   "id": 26,
@@ -262,8 +268,8 @@
   "called": [
    "check_weather"
   ],
-  "elapsed_s": 12.5,
-  "thread": "9f66a11f-26f3-4787-a191-2c00dae8cb5d"
+  "elapsed_s": 8.8,
+  "thread": "batch1"
  },
  {
   "id": 27,
@@ -272,18 +278,18 @@
   "called": [
    "check_battery"
   ],
-  "elapsed_s": 10.0,
-  "thread": "ab781b0f-5b90-461e-827b-4e0c63206c09"
+  "elapsed_s": 10.2,
+  "thread": "batch1"
  },
  {
   "id": 28,
-  "hit": false,
+  "hit": true,
   "args_ok": true,
   "called": [
-   "check_route_conflict"
+   "check_airspace"
   ],
-  "elapsed_s": 11.6,
-  "thread": "fc50f526-2304-4b0b-b95b-2f822651335c"
+  "elapsed_s": 6.9,
+  "thread": "batch1"
  },
  {
   "id": 29,
@@ -292,8 +298,8 @@
   "called": [
    "check_drone_obstacle"
   ],
-  "elapsed_s": 6.0,
-  "thread": "8896b0d3-0402-4908-be8e-176a10f3f612"
+  "elapsed_s": 6.6,
+  "thread": "batch1"
  },
  {
   "id": 30,
@@ -301,10 +307,11 @@
   "args_ok": true,
   "called": [
    "preflight_check",
+   "take_off",
    "take_off"
   ],
-  "elapsed_s": 27.0,
-  "thread": "ddd63d24-5e59-4b5c-b707-41f69037d924"
+  "elapsed_s": 22.5,
+  "thread": "batch2"
  },
  {
   "id": 31,
@@ -313,8 +320,8 @@
   "called": [
    "query_plots"
   ],
-  "elapsed_s": 7.2,
-  "thread": "5d5f5858-e8af-46bf-b680-20f8c0fd48ff"
+  "elapsed_s": 6.8,
+  "thread": "batch1"
  },
  {
   "id": 32,
@@ -323,18 +330,19 @@
   "called": [
    "generate_route"
   ],
-  "elapsed_s": 13.1,
-  "thread": "f660f59e-6ae4-4e0e-8c23-d34620898eeb"
+  "elapsed_s": 10.9,
+  "thread": "batch1"
  },
  {
   "id": 33,
   "hit": true,
   "args_ok": true,
   "called": [
+   "generate_route",
    "generate_route"
   ],
-  "elapsed_s": 15.2,
-  "thread": "aeef4121-6fd1-4781-8b74-17e156671141"
+  "elapsed_s": 50.7,
+  "thread": "batch2"
  },
  {
   "id": 34,
@@ -343,8 +351,8 @@
   "called": [
    "generate_route"
   ],
-  "elapsed_s": 13.8,
-  "thread": "cbd0c833-a13b-4f5c-b3c0-5880ad8b8cf4"
+  "elapsed_s": 16.7,
+  "thread": "batch2"
  },
  {
   "id": 35,
@@ -353,29 +361,28 @@
   "called": [
    "generate_route"
   ],
-  "elapsed_s": 24.4,
-  "thread": "81b60d99-d0fe-4392-a49f-8ea15d9af27e"
+  "elapsed_s": 14.8,
+  "thread": "batch2"
  },
  {
   "id": 36,
   "hit": true,
   "args_ok": true,
   "called": [
-   "suggest_schedule"
+   "create_task_plan"
   ],
-  "elapsed_s": 34.2,
-  "thread": "95488e11-b010-4160-9001-6fb13354a7b7"
+  "elapsed_s": 24.2,
+  "thread": "batch2"
  },
  {
   "id": 37,
-  "hit": false,
+  "hit": true,
   "args_ok": true,
   "called": [
-   "suggest_schedule",
-   "find_nearby_drones"
+   "create_task_plan"
   ],
-  "elapsed_s": 29.9,
-  "thread": "d6bc7d0e-1456-4734-a992-3f9dc8b14141"
+  "elapsed_s": 20.5,
+  "thread": "batch2"
  },
  {
   "id": 38,
@@ -384,8 +391,8 @@
   "called": [
    "create_task_plan"
   ],
-  "elapsed_s": 25.1,
-  "thread": "899b1029-a3d6-4434-973f-397daec1dd29"
+  "elapsed_s": 27.2,
+  "thread": "batch2"
  },
  {
   "id": 39,
@@ -396,8 +403,8 @@
    "list_task_history",
    "list_scheduled_tasks"
   ],
-  "elapsed_s": 20.2,
-  "thread": "bb8a2fb4-d582-4f8b-bcea-fa7f789d0fb1"
+  "elapsed_s": 20.4,
+  "thread": "batch2"
  },
  {
   "id": 40,
@@ -406,8 +413,8 @@
   "called": [
    "list_task_history"
   ],
-  "elapsed_s": 7.4,
-  "thread": "7c31c6b9-07ce-4904-8ddd-892d3d3a08e3"
+  "elapsed_s": 7.6,
+  "thread": "batch2"
  },
  {
   "id": 41,
@@ -416,8 +423,8 @@
   "called": [
    "list_alerts"
   ],
-  "elapsed_s": 19.0,
-  "thread": "ab999657-898e-4042-8f8d-1ef16d219aa7"
+  "elapsed_s": 22.9,
+  "thread": "batch2"
  },
  {
   "id": 42,
@@ -426,8 +433,8 @@
   "called": [
    "list_alerts"
   ],
-  "elapsed_s": 21.3,
-  "thread": "94f328f4-1452-4624-9aa2-eb4e595738e4"
+  "elapsed_s": 13.0,
+  "thread": "batch2"
  },
  {
   "id": 43,
@@ -436,8 +443,8 @@
   "called": [
    "get_unhandled_count"
   ],
-  "elapsed_s": 5.3,
-  "thread": "d914ea0a-f6fd-4259-a953-9b2ef1fcbe96"
+  "elapsed_s": 5.6,
+  "thread": "batch2"
  },
  {
   "id": 44,
@@ -445,10 +452,11 @@
   "args_ok": true,
   "called": [
    "get_device_health",
-   "list_alerts"
+   "list_alerts",
+   "get_drone_status"
   ],
-  "elapsed_s": 19.8,
-  "thread": "24532267-a79e-47c3-a586-bbb7d822e9be"
+  "elapsed_s": 21.4,
+  "thread": "batch2"
  },
  {
   "id": 45,
@@ -457,8 +465,8 @@
   "called": [
    "handle_alert"
   ],
-  "elapsed_s": 6.9,
-  "thread": "3d24cb4c-93fa-4a7f-b232-c469ab521ba4"
+  "elapsed_s": 8.6,
+  "thread": "batch2"
  },
  {
   "id": 46,
@@ -467,28 +475,31 @@
   "called": [
    "list_zones"
   ],
-  "elapsed_s": 15.2,
-  "thread": "105f82e0-57a0-4c1f-ae62-54b51e5ae2a1"
+  "elapsed_s": 17.9,
+  "thread": "batch2"
  },
  {
   "id": 47,
   "hit": true,
   "args_ok": true,
   "called": [
-   "list_zones"
+   "list_zones",
+   "read_file",
+   "read_file",
+   "read_file"
   ],
-  "elapsed_s": 12.1,
-  "thread": "5a7a0b45-30e3-4591-9f57-53211f2e2e7d"
+  "elapsed_s": 27.5,
+  "thread": "batch2"
  },
  {
   "id": 48,
   "hit": true,
   "args_ok": true,
   "called": [
-   "check_route_conflict"
+   "check_airspace"
   ],
-  "elapsed_s": 12.7,
-  "thread": "7f0080eb-5ce3-4427-b0e8-55252aca3d01"
+  "elapsed_s": 9.6,
+  "thread": "batch2"
  },
  {
   "id": 49,
@@ -498,8 +509,8 @@
    "query_plots",
    "create_zone"
   ],
-  "elapsed_s": 24.6,
-  "thread": "ebde838a-ce71-42dd-8e56-5461bacaf934"
+  "elapsed_s": 30.6,
+  "thread": "batch2"
  },
  {
   "id": 50,
@@ -508,8 +519,8 @@
   "called": [
    "list_media"
   ],
-  "elapsed_s": 27.5,
-  "thread": "8643fcee-e28a-4c1c-94ae-d4c3c10e9a02"
+  "elapsed_s": 17.8,
+  "thread": "batch2"
  },
  {
   "id": 51,
@@ -518,8 +529,8 @@
   "called": [
    "get_media_link"
   ],
-  "elapsed_s": 18.9,
-  "thread": "a1d5c217-c977-4c08-94ec-61ad442ad126"
+  "elapsed_s": 12.3,
+  "thread": "retry"
  },
  {
   "id": 52,
@@ -528,32 +539,28 @@
   "called": [
    "list_flight_videos"
   ],
-  "elapsed_s": 8.2,
-  "thread": "4288982c-f148-4881-967d-a4e5564365ce"
+  "elapsed_s": 8.5,
+  "thread": "batch2"
  },
  {
   "id": 53,
   "hit": true,
   "args_ok": true,
   "called": [
-   "get_camera_coverage",
-   "read_file"
+   "get_camera_coverage"
   ],
-  "elapsed_s": 37.2,
-  "thread": "a80535d2-5843-4f6d-91a6-f064011f4100"
+  "elapsed_s": 20.7,
+  "thread": "batch2"
  },
  {
   "id": 54,
   "hit": true,
   "args_ok": true,
   "called": [
-   "get_task_report",
-   "list_media",
-   "list_flight_videos",
    "start_3d_modeling"
   ],
-  "elapsed_s": 28.0,
-  "thread": "1ab9f7e0-614f-4332-b703-5fe848cbc355"
+  "elapsed_s": 13.4,
+  "thread": "batch2"
  },
  {
   "id": 55,
@@ -562,8 +569,8 @@
   "called": [
    "suggest_schedule"
   ],
-  "elapsed_s": 33.5,
-  "thread": "1f58ee5d-6e1e-41c3-9e57-370e35824b95"
+  "elapsed_s": 38.4,
+  "thread": "batch2"
  },
  {
   "id": 56,
@@ -572,18 +579,19 @@
   "called": [
    "list_scheduled_tasks"
   ],
-  "elapsed_s": 12.4,
-  "thread": "d5e2ed2a-6ea6-41d2-bb9d-9fe1bd9183b3"
+  "elapsed_s": 20.6,
+  "thread": "batch2"
  },
  {
   "id": 57,
   "hit": true,
   "args_ok": true,
   "called": [
-   "get_schedule_conflicts"
+   "get_schedule_conflicts",
+   "get_drone_status"
   ],
-  "elapsed_s": 9.9,
-  "thread": "5411c150-9420-4a99-94e2-23346d318d52"
+  "elapsed_s": 14.0,
+  "thread": "batch2"
  },
  {
   "id": 58,
@@ -592,8 +600,8 @@
   "called": [
    "reschedule_task"
   ],
-  "elapsed_s": 14.7,
-  "thread": "79288af9-e0e6-4bc0-8f2b-a2f7cca062c0"
+  "elapsed_s": 14.1,
+  "thread": "batch2"
  },
  {
   "id": 59,
@@ -602,12 +610,11 @@
   "called": [
    "get_schedule_conflicts",
    "list_task_history",
-   "list_scheduled_tasks",
    "list_task_history",
    "list_scheduled_tasks"
   ],
-  "elapsed_s": 19.5,
-  "thread": "0debce17-0953-4fa8-963c-deef8dcb2dde"
+  "elapsed_s": 19.6,
+  "thread": "batch2"
  },
  {
   "id": 60,
@@ -616,21 +623,191 @@
   "called": [
    "create_recurring_task"
   ],
-  "elapsed_s": 13.9,
-  "thread": "ffec8ed2-afa3-470b-9fd7-0e6023721a86"
+  "elapsed_s": 16.2,
+  "thread": "batch2"
  },
  {
   "id": 61,
   "hit": true,
   "args_ok": true,
   "called": [
-   "query_plots",
-   "find_nearby_drones",
-   "generate_route",
    "get_drone_status",
+   "generate_route",
    "preflight_check"
   ],
-  "elapsed_s": 42.5,
-  "thread": "36b397ab-235d-4601-99a7-658ebb89a00e"
+  "elapsed_s": 33.7,
+  "thread": "batch2"
+ },
+ {
+  "id": 62,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_drone_status",
+   "start_live",
+   "start_live",
+   "get_drone_status",
+   "get_live_capacity",
+   "get_device_health",
+   "get_dock_environment",
+   "list_alerts"
+  ],
+  "elapsed_s": 38.8,
+  "thread": "retry"
+ },
+ {
+  "id": 63,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_live_capacity",
+   "get_drone_status",
+   "set_live_quality",
+   "start_live",
+   "get_device_health",
+   "list_alerts"
+  ],
+  "elapsed_s": 31.7,
+  "thread": "retry"
+ },
+ {
+  "id": 64,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "switch_camera"
+  ],
+  "elapsed_s": 8.2,
+  "thread": "batch2"
+ },
+ {
+  "id": 65,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "stop_live"
+  ],
+  "elapsed_s": 7.3,
+  "thread": "batch2"
+ },
+ {
+  "id": 66,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_telemetry_history",
+   "list_task_history",
+   "get_flight_trajectory",
+   "list_task_history"
+  ],
+  "elapsed_s": 31.3,
+  "thread": "batch2"
+ },
+ {
+  "id": 67,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_drone_status",
+   "check_takeover_no_fly_zone",
+   "takeoff_to_point",
+   "find_nearby_drones",
+   "find_nearby_drones",
+   "find_nearby_drones"
+  ],
+  "elapsed_s": 144.4,
+  "thread": "batch2"
+ },
+ {
+  "id": 68,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "set_height_limit"
+  ],
+  "elapsed_s": 11.6,
+  "thread": "batch2"
+ },
+ {
+  "id": 69,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "emergency_stop"
+  ],
+  "elapsed_s": 9.6,
+  "thread": "batch2"
+ },
+ {
+  "id": 70,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "return_home"
+  ],
+  "elapsed_s": 14.1,
+  "thread": "batch2"
+ },
+ {
+  "id": 71,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_alerts"
+  ],
+  "elapsed_s": 23.5,
+  "thread": "batch2"
+ },
+ {
+  "id": 72,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_dock_environment"
+  ],
+  "elapsed_s": 12.5,
+  "thread": "batch2"
+ },
+ {
+  "id": 73,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "read_file",
+   "debug_mode",
+   "debug_mode"
+  ],
+  "elapsed_s": 20.7,
+  "thread": "batch2"
+ },
+ {
+  "id": 74,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "air_conditioner"
+  ],
+  "elapsed_s": 9.9,
+  "thread": "batch2"
+ },
+ {
+  "id": 75,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "debug_mode"
+  ],
+  "elapsed_s": 14.3,
+  "thread": "batch2"
+ },
+ {
+  "id": 76,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "create_task_plan"
+  ],
+  "elapsed_s": 22.2,
+  "thread": "batch2"
  }
 ]
