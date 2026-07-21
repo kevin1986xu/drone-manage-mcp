@@ -13,11 +13,12 @@
    ```
    VPN 不通先修 VPN（历史上会整段抖断,重连即可）。
 2. **改注册 IP 并重启 mcp-services**：
-   - `正式开发/mcp-services/.env` → `MCP_SERVICE_IP=<新 IP>`
-   - 重启 runner（kill 用 `lsof -ti TCP:8201 -sTCP:LISTEN`,别不带 -sTCP:LISTEN——会误杀桥/BFF）
+   - `正式开发/mcp-services/.env` → `MCP_SERVICE_IP=<新 IP>`（此值只用于 Nacos 注册给 Higress 等**外部**发现）
+   - 重启前先 `pkill -f uav_mcp.runner` **清所有旧实例**（否则端口被占,新实例 STARTUP_FAILURE 静默死、旧实例继续用旧 IP 注册——踩过）
    - 现为**八域**（8201-8204 + 8206-8209）；Nacos 并发注册在 VPN 上会集体超时,
      runner 已按端口错峰+退避重试,等日志里"已注册/已更新"两词合计 8 条再进下一步
-3. **起 nacos_bridge**（它会自动把 DeerFlow 配置跟到新 IP,不用手改 extensions_config.json）。
+3. **⚠ 不要跑 nacos_bridge（本机部署）**：Gateway 与 mcp-services 同在本机,
+   `deerflow/extensions_config.json` 的 url 用 **`127.0.0.1:820x`**（`cp deploy/extensions_config.json deerflow/` 即是 127 版）,本机互连**免疫 en0 IP 漂移**,IP 变了也不用改这份。bridge 会从 Nacos 旧注册把 url 改回失效 IP、甚至清空 mcpServers（2026-07-21 踩过:bridge 清空 config → Gateway MCP tools=0 → 评测全零）。改完 config **必须重启 Gateway**（它启动时读一次 config）,触发一次对话后看日志 `MCP tools: 45`（八域全加载;若 0 先查 config url 是不是 127 + 重启 Gateway）。
 4. **跑平台契约冒烟**（接口漂移早发现——平台侧仍在活跃迭代）：
    ```bash
    cd 正式开发/mcp-services && PYTHONPATH=src .venv/bin/python scripts/contract_smoke.py
@@ -67,7 +68,15 @@
    注意:告警/排期/照片墙在 GIS 前端(8300)是**文本兜底**(无专用可视化指令),
    若要落图效果走 3000 或口头带过;`create_scheduled_task` 落库需 `UAV_CREATE_REAL_TASK=1`,
    演示排期建议(suggest_schedule 只算不写)不需要开,**真落定时任务才需要,谨慎**。
-5. 兜底预案:**现场断网/LLM 挂** → 演示版后端以 `AGENT_MODE=scripted` 重启(秒级响应、可脱网,38 条话术全兜底);**演完必须不带 override 重启回 llm**。
+5. **空域安全叙事（差异化王牌,check_airspace 已接真实围栏检测）**——两条组合彩排各验一次:
+   - **安全拦截**:"用庙头镇的无人机飞变更调查00005,检查没问题就起飞" → 航线穿禁飞区
+     (汉川有 16 个风机禁飞区 + 测试禁飞区) → preflight 空域项 **fail** → 模型**正确拒飞**
+     并提示重规划。行业里大模型指挥调度+人在环+空域硬拦无对标,是强卖点。
+   - **干净起飞**:"用**下辛店镇国土所**的无人机飞**变更调查00005**,检查没问题就起飞" →
+     空域 pass → 走到 take_off 确认卡片 → 顺利起飞。
+   - 纪律:**00003 有歧义**(变更调查+临时核查两批次都有),演示统一用唯一的 **00005**;
+     空域结果精确到起点机场(同图斑换机场结果不同,因含机场→图斑连接段)——组合别记错。
+6. 兜底预案:**现场断网/LLM 挂** → 演示版后端以 `AGENT_MODE=scripted` 重启(秒级响应、可脱网,38 条话术全兜底);**演完必须不带 override 重启回 llm**。
 
 ## 六、撤场
 
