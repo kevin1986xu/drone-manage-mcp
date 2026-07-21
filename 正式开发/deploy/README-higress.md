@@ -84,10 +84,31 @@ docker compose -f higress-standalone.docker-compose.yml up -d
    后重启 runner（命令见 §2 前置条件 3）。
 4. **验证结果**：8 个域带租户 key 全 200；无 key/错 key/后端 key
    `uav-m1-test-key-2026` 直打网关全 401（后端统一 key 不再对外可用，符合预期）。
+   完整冒烟：`mcp-services/scripts/smoke_gateway.py`（8 域完整 MCP 会话 +
+   真实工具调用穿透平台 + 负面矩阵 + 直连兼容，16 项）。
+
+## 4.5 按租户限流（2026-07-21 已落地）
+
+`key-rate-limit` 插件（单机令牌桶；容器无 Redis，cluster 版用不了），按
+`X-API-Key` 的值限流，走控制台标准插件 API（这个 API 是正路，不用动 apiserver）：
+
+```bash
+curl -b <cookie> -X PUT http://localhost:8888/v1/global/plugin-instances/key-rate-limit \
+  -H 'Content-Type: application/json' -d '{
+  "pluginName": "key-rate-limit", "pluginVersion": "1.0.0",
+  "scope": "GLOBAL", "enabled": true,
+  "rawConfigurations": "limit_by_header: X-API-Key\nlimit_keys:\n- key: demo-key-2026-a1b2c3\n  query_per_minute: 120\n"}'
+```
+
+实测：130 连发 → 精确 120×200 + 10×429，窗口 1 分钟重置。新租户在
+`limit_keys` 加条目即可；不在表内的 key 不限流（但早被 key-auth 401 挡了）。
 
 ## 5. 网络收口 + 两网关区别
 
-- **收口（信任边界②）**：Higress 就位后，mcp-services 限制 820x 仅网关可达（防火墙/mTLS）。
+- **收口（信任边界②，待做）**：mcp-services 限制 820x 仅网关可达。本机 demo 环境
+  是 macOS 宿主跑服务 + docker 跑网关，动 pf 防火墙风险大不值当；生产（Linux 部署）
+  用 iptables 只放行网关 IP，或 mcp-services 绑定内网网卡 + 安全组。做完后
+  `smoke_gateway.py` §4 直连兼容项应改为「预期失败」。
 - **别混淆两个网关**：Higress（本机 8080，关一，消费方→工具）vs 平台网关
   （demo-lt:11412，关三，工具→drone-manage，admin 认证）。
 
@@ -102,6 +123,7 @@ docker compose -f higress-standalone.docker-compose.yml up -d
 | 网关 401（空 body） | 没带/带错租户 key（global_auth 开启后后端统一 key 也不行） | 带消费者 key（如 tenant-demo 的） |
 | 后端 401（`{"error": ...}` body） | 网关放行但后端 UAV_TENANT_KEYS 没这个 key | .env 加 key→租户映射，重启 runner |
 | runner 起不来 `[Errno 48] 8201` | pkill 后老进程未退干净就起新的 | 等 1-2 秒确认 `lsof -iTCP:8201` 空了再起 |
+| 网关 429 | 该租户 key 触发限流（120/min，压测后常见） | 等 1 分钟窗口重置；调 §4.5 limit_keys |
 
 ## 停/日志
 
