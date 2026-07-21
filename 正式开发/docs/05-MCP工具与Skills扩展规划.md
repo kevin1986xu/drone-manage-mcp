@@ -280,7 +280,7 @@ allowed-tools 按 §6.1 可见性矩阵声明）,评测集同步扩至 60 条（
 | 批次 | 内容 | 依赖 | 粗估 |
 |---|---|---|---|
 | **P0（下一里程碑）** | uav-airspace-mcp（根治 preflight 空域占位）+ uav-alert-mcp + uav-media-mcp + **uav-task-schedule-mcp（suggest_schedule/定时循环/重排期/失败重试/断点续飞）**;evidence-report + smart-scheduling skill;评测集扩 ~20 条（含紧急白名单注入反向用例）;各域 contract smoke test（§6.3） | 平台现有接口,无新部署 | 5-6 天 |
-| **P1** | uav-live-mcp（GIS show_live）+ uav-flight-control-mcp(含紧急白名单机制) + **uav-dock-debug-mcp（机场调试全套）**;emergency-response + dock-maintenance skill;batch-patrol 补全 | 直播拉流地址联调;喊话器/探照灯/舱盖需真机验证 | 6-8 天 |
+| **P1 ✅（2026-07-21 落地）** | uav-live-mcp（7 工具）+ uav-flight-control-mcp（12 工具,含紧急白名单⚡防注入三件套+设备级操作锁）+ uav-dock-debug-mcp（10 工具,顺序闸）;emergency-response + dock-maintenance skill;batch-patrol 补全（失败重试/断点续飞/每日汇总） | **喊话器/探照灯/舱盖/指点/一键起飞等写面为真机联调项**（读面契约冒烟已过）;直播开流需设备 MQTT 在线 | 实际 1 天 |
 | **P1.5** | uav-recognition-mcp + smart-recognition 补全 + daily-situation | AI 推理平台在现网可用性待确认（RabbitMQ 队列/模型服务） | 3-5 天 |
 | **P2** | dispatch-order / ops(固件资产) / workflow 三域 + 权限透传（Agent≤用户） | 多用户/生产化诉求明确后 | 5-8 天 |
 
@@ -306,14 +306,19 @@ P0 落完（8 域 ~60 工具）就会显现。要求：
 
   **当前矩阵（2026-07-20,随八域上线落地;skill 侧由 allowed-tools 硬约束）**：
 
-  | skill | dispatch | route | preflight | flight-task | airspace | alert | media | task-schedule |
-  |---|---|---|---|---|---|---|---|---|
-  | plot-inspection | ✓ | ✓ | ✓ | ✓ | — | — | — | — |
-  | batch-patrol | ✓ | ✓(detail) | — | — | — | — | — | — |
-  | evidence-report | — | — | — | ✓(报告/历史) | — | — | ✓ | — |
-  | smart-scheduling | ✓(查图斑) | ✓(生成航线) | — | — | — | — | — | ✓ |
-  | smart-recognition(占位) | — | — | — | ✓ | — | — | ✓ | — |
-  | duty-watch 值班监控 | — | — | — | — | ✓ | ✓ | — | — |
+  | skill | dispatch | route | preflight | flight-task | airspace | alert | media | task-schedule | live | flight-control | dock-debug |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | plot-inspection | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — |
+  | batch-patrol | ✓ | ✓(detail) | — | ✓(报告) | — | — | — | ✓(重试/续飞) | — | ✓(暂停/恢复) | — |
+  | evidence-report | — | — | — | ✓(报告/历史) | — | — | ✓ | — | — | — | — |
+  | smart-scheduling | ✓(查图斑) | ✓(生成航线) | — | — | — | — | — | ✓ | — | — | — |
+  | smart-recognition(占位) | — | — | — | ✓ | — | — | ✓ | — | — | — | — |
+  | duty-watch 值班监控 | — | — | — | — | ✓ | ✓ | — | — | ✓(遥测/轨迹) | ✓(限高) | — |
+  | emergency-response 应急响应 | ✓(定位/找机) | — | — | — | — | ✓(告警) | ✓(取证) | — | ✓(直播) | ✓(起飞/喊话/⚡) | — |
+  | dock-maintenance 机场维护 | — | — | — | — | — | ✓(体检) | — | — | ✓(舱内直播) | — | ✓ |
+
+  （2026-07-21 P1 三域随 emergency-response / dock-maintenance / duty-watch 扩展落地，
+  29 个新工具全部入矩阵，无可见性孤儿。）
 
   **重要语义（2026-07-20 实测修正）**：DeerFlow 的 tool_policy 规定——只要任一 skill
   声明了 allowed-tools,**全局可见工具面 = 全部 skill 的 allowed-tools 并集**,

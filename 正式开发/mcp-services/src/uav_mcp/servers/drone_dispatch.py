@@ -61,7 +61,7 @@ def build() -> FastMCP:
         priority_first: bool = True,
         confirm_token: str | None = None,
     ) -> dict[str, Any]:
-        """【高危·人在环】批量核查排期：按优先级+就近合并成架次、按每日上限装箱到各天。无 confirm_token 仅生成待确认计划，人工确认整份计划后生效并执行第 1 天批次。"""
+        """【高危·人在环】批量核查排期并执行：用户说"这几个图斑批量安排一下""分几天飞完""排个计划去飞"时调用本工具（按优先级+就近合并成架次、逐日装箱，确认后立即执行第 1 天批次）。只要天气窗口建议、不落地执行时才用 uav-task-schedule-mcp 的 suggest_schedule。无 confirm_token 仅生成待确认计划。"""
         return batch_core.create_task_plan(
             as_list(plot_ids), deadline_days, max_sorties_per_day, priority_first, confirm_token
         )

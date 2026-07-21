@@ -67,6 +67,33 @@ def main() -> int:
     if jobs:
         check("作业关键字段", all(k in jobs[0] for k in ("jobId", "beginTime", "status")))
 
+    print("[直播/遥测 live]（P1，只读链路）")
+    docks_pre = c.list_docks()
+    online = next((d for d in docks_pre if d.get("online") and d.get("device_sn")), None)
+    if online:
+        sn = online["device_sn"]
+        try:
+            cap = c.live_capacity(sn)
+            check("直播能力可查", True, f"{online['drone_id']} capacity={'有' if cap else '空'}")
+        except Exception as exc:  # noqa: BLE001 —— 契约面：接口可达但设备可能不支持
+            check("直播能力可查", "404" in str(exc) or "不" in str(exc), f"{exc}")
+        osd = c.osd_latest(sn)
+        check("OSD latest 可查", osd is None or isinstance(osd, dict),
+              "有数据" if osd else "无数据（未飞过）")
+        dosd = c.dock_osd_latest(sn)
+        check("机场 OSD（环境读数）", dosd is None or isinstance(dosd, dict),
+              f"温度={dosd.get('temperature') if dosd else '—'}")
+    else:
+        check("在线机场存在（live 前置）", False, "全部离线，直播契约跳过")
+
+    print("[飞控 flight-control]（P1，只读链路；写面真机联调）")
+    try:
+        nfz = c.takeover_no_fly_zone_check(113.42, 30.65, 100)
+        check("接管限飞检查可用", True, f"{str(nfz)[:60]}")
+    except Exception as exc:  # noqa: BLE001
+        check("接管限飞检查可用", False, f"{exc}")
+    print("  ↳ 写面（返航/急停/指点/喊话/舱盖/充电…）为真机联调项，本冒烟不触发")
+
     print("[设备 device]")
     docks = c.list_docks()
     check("机场设备非空", len(docks) > 0, f"{len(docks)} 台")

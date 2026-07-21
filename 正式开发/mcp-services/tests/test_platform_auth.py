@@ -25,6 +25,8 @@ def client():
 def _clean_config(monkeypatch):
     monkeypatch.setattr(config, "DRONE_PLATFORM_TOKEN", "")
     monkeypatch.setattr(config, "DRONE_USER_ID_HEADER", "")
+    # .env 配了网关会走真实登录（2026-07-20 起），必须掐掉才是"纯本地"
+    monkeypatch.setattr(config, "DRONE_GATEWAY_BASE", "")
 
 
 def test_bare_when_unconfigured(client):

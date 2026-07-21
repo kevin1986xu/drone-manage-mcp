@@ -39,6 +39,12 @@ DANGEROUS_TOOLS = {
     # task-schedule
     "create_scheduled_task", "create_recurring_task", "cancel_scheduled_task",
     "reschedule_task", "retry_failed_task", "resume_from_breakpoint",
+    # flight-control（2026-07-21 P1；return_home/emergency_stop 是紧急白名单⚡故不在此）
+    "pause_task", "resume_task", "fly_to_point", "takeoff_to_point",
+    "speaker_tts", "set_height_limit",
+    # dock-debug（P1）
+    "debug_mode", "dock_cover", "dock_putter", "drone_power",
+    "charge_control", "device_reboot", "battery_maintenance",
 }
 # 审批服务签发的 token 形态：secrets.token_urlsafe(24) → 32 位 url-safe
 _TOKEN_RE = re.compile(r"^[A-Za-z0-9_-]{24,64}$")

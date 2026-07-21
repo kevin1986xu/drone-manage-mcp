@@ -22,8 +22,11 @@ from uav_mcp.auth import ApiKeyMiddleware
 from uav_mcp.servers import (
     airspace,
     alert,
+    dock_debug,
     drone_dispatch,
+    flight_control,
     flight_task,
+    live,
     media,
     preflight,
     route_planning,
@@ -42,6 +45,9 @@ BUILDERS = {
     "alert": alert.build,
     "media": media.build,
     "task-schedule": task_schedule.build,
+    "live": live.build,
+    "flight-control": flight_control.build,
+    "dock-debug": dock_debug.build,
 }
 
 # 保持 naming client 引用（ref 模式 gRPC 长连接续活临时实例）

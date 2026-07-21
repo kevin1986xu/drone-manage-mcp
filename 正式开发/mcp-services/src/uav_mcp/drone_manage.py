@@ -491,6 +491,145 @@ class DroneManageClient:
         self._call("POST", "/api/tasks", json=payload, timeout=120)
         return self.get_flight_task(payload["taskId"])
 
+    # ── 直播与遥测回放（DeviceLiveStreamController /device/live/* + InfluxDB OSD + 轨迹）──
+
+    def live_capacity(self, device_sn: str) -> Any:
+        body = self._call("GET", f"/device/live/capacity/{device_sn}")
+        return body.get("data")
+
+    def live_start(self, device_sn: str, source: str = "drone") -> Any:
+        """source：drone（无人机镜头）/ airport（机场镜头）/ assist（无人机辅助摄像）。"""
+        path = {"drone": f"/device/live/drone/start/{device_sn}",
+                "airport": f"/device/live/airport/start/{device_sn}",
+                "assist": f"/device/live/drone/assist/start/{device_sn}"}[source]
+        body = self._call("POST", path, timeout=30)
+        return body.get("data")
+
+    def live_stop(self, device_sn: str) -> Any:
+        body = self._call("POST", f"/device/live/stop/{device_sn}")
+        return body.get("data")
+
+    def live_quality(self, device_sn: str, quality: int) -> Any:
+        """quality：0 高清 / 1 标清 / 2 流畅（平台口径）。"""
+        body = self._call("POST", f"/device/live/quality/{device_sn}/{quality}")
+        return body.get("data")
+
+    def live_switch_dock_camera(self, device_sn: str, camera_position: int) -> Any:
+        body = self._call("POST", f"/device/live/switchDock/{device_sn}/{camera_position}")
+        return body.get("data")
+
+    def live_switch_drone_camera(self, device_sn: str, video_type: str) -> Any:
+        """video_type：wide 广角 / zoom 变焦 / ir 红外（平台 videoType 口径）。"""
+        body = self._call("POST", f"/device/live/switchDrone/{device_sn}/{video_type}")
+        return body.get("data")
+
+    def osd_history(self, device_sn: str, start_time: str, end_time: str) -> list[dict[str, Any]]:
+        """GET /drone/influxdb/query/osd/device/{sn}（时间格式 yyyy-MM-dd HH:mm:ss）。"""
+        body = self._call("GET", f"/drone/influxdb/query/osd/device/{device_sn}",
+                          params={"startTime": start_time, "endTime": end_time}, timeout=60)
+        return body.get("data") or []
+
+    def osd_latest(self, device_sn: str) -> dict[str, Any] | None:
+        body = self._call("GET", f"/drone/influxdb/query/osd/latest/{device_sn}")
+        return body.get("data")
+
+    def trajectory_by_mission(self, mission_id: str) -> Any:
+        body = self._call("GET", f"/api/trajectories/mission/{mission_id}", timeout=60)
+        return body.get("data")
+
+    def trajectory_by_device(self, device_sn: str, start_time: str, end_time: str) -> Any:
+        body = self._call("GET", f"/api/trajectories/device/{device_sn}",
+                          params={"startTime": start_time, "endTime": end_time}, timeout=60)
+        return body.get("data")
+
+    # ── 实时飞控（DockController jobs/* + DRC + wayline job 状态）──
+
+    def dock_service_job(self, device_sn: str, service: str, param: dict[str, Any] | None = None) -> Any:
+        """POST /control/api/v1/devices/{sn}/jobs/{service}——下行指令统一入口。
+        service 见平台 RemoteDebugMethodEnum（return_home / debug_mode_open /
+        putter_open / air_conditioner_mode_switch / battery_maintenance_switch…）。
+        除 return_home(_cancel) 外其余 service 要求设备已进调试模式。"""
+        body = self._call("POST", f"/control/api/v1/devices/{device_sn}/jobs/{service}",
+                          json=param or {}, timeout=30)
+        return body.get("data")
+
+    def emergency_stop(self, device_sn: str) -> Any:
+        """POST /control/api/v1/devices/{sn}/emergencyStop（独立端点，非 service 枚举）。"""
+        body = self._call("POST", f"/control/api/v1/devices/{device_sn}/emergencyStop", timeout=30)
+        return body.get("data")
+
+    def update_wayline_job_status(self, job_id: str, status: int) -> Any:
+        """PUT /wayline/api/v1/workspaces/{ws}/jobs/{job_id}——WaylineTaskStatusEnum
+        按 ordinal 序列化：**0=PAUSE（flighttaskPause）、1=RESUME（flighttaskRecovery）**。
+        平台无独立暂停/恢复路由；任务未在执行中时平台侧直接抛错。"""
+        body = self._call("PUT",
+                          f"/wayline/api/v1/workspaces/{config.DRONE_WORKSPACE_ID}/jobs/{job_id}",
+                          json={"status": status}, timeout=30)
+        return body.get("data")
+
+    def grab_flight_authority(self, device_sn: str) -> Any:
+        body = self._call("POST", f"/control/api/v1/devices/{device_sn}/authority/flight", timeout=30)
+        return body.get("data")
+
+    def fly_to_point(self, device_sn: str, param: dict[str, Any]) -> Any:
+        body = self._call("POST", f"/control/api/v1/devices/{device_sn}/jobs/fly-to-point",
+                          json=param, timeout=30)
+        return body.get("data")
+
+    def fly_to_point_stop(self, device_sn: str) -> Any:
+        body = self._call("DELETE", f"/control/api/v1/devices/{device_sn}/jobs/fly-to-point", timeout=30)
+        return body.get("data")
+
+    def takeoff_to_point(self, device_sn: str, param: dict[str, Any]) -> Any:
+        body = self._call("POST", f"/control/api/v1/devices/{device_sn}/jobs/takeoff-to-point",
+                          json=param, timeout=60)
+        return body.get("data")
+
+    def drc_speaker(self, device_sn: str, action: str, param: dict[str, Any]) -> Any:
+        """action：tts_set / play_tts / stop / volume_set（DRC 下行，需 DRC 通道）。"""
+        body = self._call("POST", f"/control/api/v1/{device_sn}/drc/speaker_{action}",
+                          json=param, timeout=30)
+        return body.get("data")
+
+    def drc_light(self, device_sn: str, action: str, param: dict[str, Any]) -> Any:
+        """action：brightness_set / mode_set（探照灯 DRC 下行）。"""
+        body = self._call("POST", f"/control/api/v1/{device_sn}/drc/drc_light_{action}",
+                          json=param, timeout=30)
+        return body.get("data")
+
+    def set_drone_height_limit(self, device_sn: str, limit_m: int) -> Any:
+        """GET /api/tasks/setDroneHeightLimit/{sn}?droneLeightLimit=N（参数名拼写为平台原样）。"""
+        body = self._call("GET", f"/api/tasks/setDroneHeightLimit/{device_sn}",
+                          params={"droneLeightLimit": limit_m}, timeout=30)
+        return body.get("data")
+
+    def takeover_no_fly_zone_check(self, lon: float, lat: float,
+                                   altitude: float | None = None) -> Any:
+        body = self._call("POST", "/api/tasks/takeover/no-fly-zone/check",
+                          json={"workspaceId": config.DRONE_WORKSPACE_ID, "longitude": lon,
+                                "latitude": lat, "currentAltitude": altitude})
+        return body.get("data")
+
+    def payload_command(self, device_sn: str, cmd: str, data: dict[str, Any] | None = None) -> Any:
+        """POST /control/api/v1/devices/{sn}/payload/commands（相机等载荷指令，
+        cmd 如 camera_photo_take；需先夺取负载控制权）。"""
+        body = self._call("POST", f"/control/api/v1/devices/{device_sn}/payload/commands",
+                          json={"cmd": cmd, "data": data or {}}, timeout=30)
+        return body.get("data")
+
+    # ── 机场调试（DebugManageController /api/dockDebug/* + DockOsd）──
+
+    def dock_debug(self, device_sn: str, path: str) -> Any:
+        """GET /api/dockDebug/{path}/{sn}——固定路由调试指令（debug/open、dock/coverOpen、
+        drone/chargeOpen…）。putter/空调/补光灯/电池保养不在此控制器，走 dock_service_job。"""
+        body = self._call("GET", f"/api/dockDebug/{path}/{device_sn}", timeout=30)
+        return body.get("data")
+
+    def dock_osd_latest(self, device_sn: str) -> dict[str, Any] | None:
+        """GET /drone/dock/osd/latest/{sn}——机场环境读数（温湿度/风速/雨量/舱内状态）。"""
+        body = self._call("GET", f"/drone/dock/osd/latest/{device_sn}")
+        return body.get("data")
+
     # ── 气象 ─────────────────────────────────────────────────
 
     def weather_detect(self, lat: float, lon: float) -> dict[str, Any]:

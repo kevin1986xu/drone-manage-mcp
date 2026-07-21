@@ -21,7 +21,7 @@ def build() -> FastMCP:
     @mcp.tool()
     def suggest_schedule(plot_ids: list[str] | str, deadline_days: int = 7,
                          max_sorties_per_day: int = 3) -> dict[str, Any]:
-        """排期建议（只算不写库）：综合逐日天气窗口、设备已排档期、图斑优先级，给出建议排期表与理由。用户说"这些图斑下周飞完，避开下雨天""帮我排一下"时调用。确认后用 create_scheduled_task 逐条落库。"""
+        """排期建议（只算不写库、不执行）：综合逐日天气窗口、设备档期、图斑优先级给出建议排期表与理由。仅当用户明确要"避开坏天气""看天气窗口""给个排期建议"时调用；用户要"批量安排/分几天飞完"并直接执行时用 uav-drone-dispatch-mcp 的 create_task_plan，不用本工具。确认后用 create_scheduled_task 逐条落库。"""
         return schedule_core.suggest_schedule(as_list(plot_ids), deadline_days, max_sorties_per_day)
 
     @mcp.tool()

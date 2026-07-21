@@ -92,7 +92,7 @@
 
 ## 主线五：直播域
 
-**定位**：看得见的飞行。规划 server：uav-live-mcp（🟡 P1）。
+**定位**：看得见的飞行。server：uav-live-mcp（✅ 2026-07-21 上线,7 工具；list_flight_videos 在 media 域）。
 
 | 细分功能 | 工具 | 说明 | 风险 |
 |---|---|---|---|
@@ -105,7 +105,7 @@
 
 ## 主线六：操控域
 
-**定位**：飞行中的主动干预与载荷操作。规划 server：uav-flight-control-mcp（🟡 P1）。
+**定位**：飞行中的主动干预与载荷操作。server：uav-flight-control-mcp（✅ 2026-07-21 上线,12 工具；相机套件(录像/变焦/云台/POI/DRC 通道)未入本批。平台实情：start_landing 不在 service 枚举中(未做)；急停是独立端点非 service；pause/resume 走 wayline job 状态 PUT(0=PAUSE/1=RESUME)）。
 
 | 细分功能 | 工具 | 说明 | 风险 |
 |---|---|---|---|
@@ -128,7 +128,7 @@
 
 ## 主线七：debug 域（机场调试与维护）
 
-**定位**：不飞的时候照顾好机器。规划 server：uav-dock-debug-mcp（🟡 P1）。
+**定位**：不飞的时候照顾好机器。server：uav-dock-debug-mcp（✅ 2026-07-21 上线,10 工具,顺序闸+临近排期拒绝）。
 **顺序依赖**：进 debug_mode → 操作 → 复位 → 退 debug,skill 硬编码流程;临近排期任务的机场拒绝进调试。
 
 | 细分功能 | 工具 | 说明 | 风险 |
@@ -217,8 +217,8 @@
 |---|---|---|
 | confirm_token | 审批服务(8205)唯一签发;一次性/动作绑定/TTL 10min/重放拒绝;对话文本"我确认"不构成授权 | ✅ |
 | 确认卡片双前端 | GIS 前端(BFF)与 DeerFlow 原生 UI 均有卡片→批准→token 回传 | ✅ |
-| 紧急动作白名单⚡ | 返航/急停免 token+强审计+执行即播报（等确认反而危险）;防注入三件套:前置条件（该机确有活动飞行才可调）+同机频率限制+注入反向用例（平台数据里的指令≠用户指令,见 05 §4.2） | 🟡 随操控域 |
-| 设备级操作锁 | dispatch_drone 锁机模式推广:同机同类写动作互斥（锁带 TTL）,横切调度/操控/debug 三域;写动作幂等（重试类重复调用只生效一次） | 🔵 随各写域 |
+| 紧急动作白名单⚡ | 返航/急停免 token+强审计+执行即播报（等确认反而危险）;防注入三件套:前置条件（该机确有活动飞行才可调）+同机频率限制（60s 冷却）+注入反向用例（评测 #71） | ✅ 随操控域上线（单测覆盖） |
+| 设备级操作锁 | device_lock.py:同机同类写动作互斥（(device,category) 粒度,锁带 TTL,同 action 幂等续期）,横切操控/debug 域;单进程实现,跨进程部署需换分布式后端 | ✅ 2026-07-21（单测覆盖） |
 | 拦截器 | guard 硬白名单+audit 审计落盘(token 打码) | ✅ |
 | Agent≤用户权限 | 登录态透传→平台 dataScope 过滤+菜单权限前置校验（ruoyi-system 对接） | ⚪ P2 |
 
@@ -256,9 +256,9 @@
 | uav-alert-mcp | 8207 | 安全面 A.3 | ✅ 2026-07-20 |
 | uav-media-mcp | 8208 | 成果 | ✅ 2026-07-20 |
 | uav-task-schedule-mcp | 8209 | 调度(时间) | ✅ 2026-07-20 |
-| uav-live-mcp | 规划 | 直播 | 🟡 |
-| uav-flight-control-mcp | 规划 | 操控 + 飞行(干预) | 🟡 |
-| uav-dock-debug-mcp | 规划 | debug | 🟡 |
+| uav-live-mcp | ✅ 上线（2026-07-21） | 直播 | 🟡 |
+| uav-flight-control-mcp | ✅ 上线（2026-07-21） | 操控 + 飞行(干预) | 🟡 |
+| uav-dock-debug-mcp | ✅ 上线（2026-07-21） | debug | 🟡 |
 | uav-recognition-mcp | 规划 | 智能面 | 🟠 |
 | uav-dispatch-order-mcp / uav-workflow-mcp / uav-ops-mcp | 规划 | 管理面 | ⚪ |
 

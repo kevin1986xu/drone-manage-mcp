@@ -7,6 +7,11 @@ allowed-tools:
   - uav-drone-dispatch-mcp_get_plan_progress
   - uav-drone-dispatch-mcp_find_nearby_drones
   - uav-route-planning-mcp_get_route_detail
+  - uav-task-schedule-mcp_retry_failed_task
+  - uav-task-schedule-mcp_resume_from_breakpoint
+  - uav-flight-control-mcp_pause_task
+  - uav-flight-control-mcp_resume_task
+  - uav-flight-task-mcp_get_task_report
 ---
 
 # 批量巡查排期
@@ -23,9 +28,18 @@ allowed-tools:
    第 1 天批次（逐架次规划航线 + 锁定就近空闲无人机）。
 4. **进度跟踪**：用户问进度时调 `get_plan_progress`，按天/架次转述状态
    （scheduled / dispatched / queued / route_failed）。
+5. **失败处置（2026-07-21 P1 补全）**：
+   - 执行失败的架次：**先报告再重试**——如实告知失败架次与原因，用户同意后
+     `retry_failed_task`🔒（重试要新确认单，job_id 为平台 wayline jobId）；
+   - 中途断电/中断的架次：`resume_from_breakpoint`🔒 断点续飞；
+   - 飞行中需临时让路/避让：`pause_task`🔒 悬停，条件恢复后 `resume_task`🔒。
+6. **每日汇总**：当日批次全部完成后，逐任务 `get_task_report` 汇总
+   （图斑数/拍照数/起止时间），按天向用户交代成果。
 
 ## 安全红线
 
 - 计划确认前不产生任何调度动作；绝不自行构造 confirm_token。
+- 排期确认=授权**当日批次**；跨天执行前重新走 preflight（天气/空域是隔夜变量）。
+- 失败架次先报告再重试，重试/续飞/暂停/恢复各自要新的确认单，不复用旧授权。
 - 排期是确定性算法产出（优先级 → 就近分组 → 装箱），转述时不编造算法之外的理由。
 - 某架次 `queued`（无空闲设备）或 `route_failed` 时如实告知，不掩饰。

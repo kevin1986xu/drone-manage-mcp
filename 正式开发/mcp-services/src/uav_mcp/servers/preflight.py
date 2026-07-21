@@ -37,7 +37,7 @@ def build() -> FastMCP:
 
     @mcp.tool()
     def check_airspace(route_id: str, time_window: str | None = None) -> dict[str, Any]:
-        """飞前检查：空域许可核实提示（数据源接入前需人工核实）。"""
+        """飞前检查：空域合规（航线是否穿越禁飞区/管控区 + 许可状态结论）。用户问"空域许可申请了吗""空域没问题吧""能不能飞（空域角度）"时调用本工具。只要几何冲突明细/冲突多边形落图时才用 uav-airspace-mcp 的 check_route_conflict。"""
         return preflight_core.check_airspace(route_id, time_window)
 
     @mcp.tool()

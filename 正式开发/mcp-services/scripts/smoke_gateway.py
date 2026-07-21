@@ -1,6 +1,6 @@
 """Higress 网关消费者鉴权 · 端到端冒烟（deploy/README-higress.md §4）。
 
-对全部 8 个正式版 MCP 域：经网关完成完整 MCP 会话（initialize → tools/list）；
+对全部正式版 MCP 域（P1 后 11 个）：经网关完成完整 MCP 会话（initialize → tools/list）；
 调度域再做真实工具调用（query_plots，穿透后端→平台回源）。
 负面矩阵：无 key / 错 key / 后端统一 key 直打网关都必须 401。
 兼容性：直连后端 820x，租户 key 与老单 key 都应可用（收口后此项应改为失败）。
@@ -30,6 +30,9 @@ SERVERS = [
     "uav-alert-mcp",
     "uav-media-mcp",
     "uav-task-schedule-mcp",
+    "uav-live-mcp",
+    "uav-flight-control-mcp",
+    "uav-dock-debug-mcp",
 ]
 
 PASS, FAIL = "✅", "❌"
@@ -59,7 +62,7 @@ async def call_tool(url: str, key: str, tool: str, args: dict) -> dict:
 
 
 async def main() -> None:
-    print("── 1. 经网关完整 MCP 会话（initialize → tools/list）× 8 域，租户 key ──")
+    print(f"── 1. 经网关完整 MCP 会话（initialize → tools/list）× {len(SERVERS)} 域，租户 key ──")
     total = 0
     for srv in SERVERS:
         try:
@@ -68,7 +71,7 @@ async def main() -> None:
             check(f"{srv} 完整会话", len(names) > 0, f"{len(names)} 个 tool")
         except Exception as e:  # noqa: BLE001
             check(f"{srv} 完整会话", False, repr(e)[:120])
-    check("8 域工具总数", total >= 40, f"共 {total} 个 tool")
+    check("全域工具总数", total >= 70, f"共 {total} 个 tool")
 
     print("── 2. 经网关真实工具调用（调度域 query_plots → 后端 → 平台回源）──")
     try:
@@ -89,7 +92,7 @@ async def main() -> None:
                     check(f"{label} → {srv}", False, f"竟然 {r.status_code}")
                     break
             else:
-                check(f"{label} × 8 域全 401", True)
+                check(f"{label} × {len(SERVERS)} 域全 401", True)
 
         print("── 4. 直连后端兼容性（绕过网关，收口前应两把 key 都可用）──")
         for label, key in [("租户 key", TENANT_KEY), ("老单 key", BACKEND_KEY)]:

@@ -73,6 +73,10 @@ PORTS = {
     "alert": int(os.getenv("PORT_ALERT", "8207")),
     "media": int(os.getenv("PORT_MEDIA", "8208")),
     "task-schedule": int(os.getenv("PORT_TASK_SCHEDULE", "8209")),
+    # P1 三域（2026-07-21 起）
+    "live": int(os.getenv("PORT_LIVE", "8210")),
+    "flight-control": int(os.getenv("PORT_FLIGHT_CONTROL", "8211")),
+    "dock-debug": int(os.getenv("PORT_DOCK_DEBUG", "8212")),
 }
 
 # ── Nacos 注册（可选；不配则只起服务不注册）──────────────────

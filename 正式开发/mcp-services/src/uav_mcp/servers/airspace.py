@@ -24,7 +24,7 @@ def build() -> FastMCP:
 
     @mcp.tool()
     def check_route_conflict(route_id: str, altitude_m: float | None = None) -> dict[str, Any]:
-        """航线空域合规检测：航线是否穿越禁飞区/限飞区、是否超限高区限制。规划航线后、起飞前调用；返回冲突清单（含冲突多边形可落图）。fail=禁止起飞需重新规划，warn=可飞但需注意。"""
+        """航线与围栏的几何冲突分析：穿越哪些禁飞区/限飞区、是否超限高，返回冲突清单与冲突多边形（可落图）。fail=禁止起飞需重新规划，warn=可飞但需注意。用户问"空域许可/申请了吗"这类合规结论时用 preflight 域的 check_airspace，不用本工具。"""
         return zones_core.check_route_conflict(route_id, altitude_m)
 
     @mcp.tool()

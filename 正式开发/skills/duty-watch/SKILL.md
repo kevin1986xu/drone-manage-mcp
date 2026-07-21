@@ -12,6 +12,9 @@ allowed-tools:
   - uav-airspace-mcp_check_route_conflict
   - uav-airspace-mcp_create_zone
   - uav-airspace-mcp_delete_zone
+  - uav-live-mcp_get_telemetry_history
+  - uav-live-mcp_get_flight_trajectory
+  - uav-flight-control-mcp_set_height_limit
 ---
 
 # 值班监控
@@ -27,6 +30,9 @@ allowed-tools:
 - "有哪些禁飞区/管控区" → `list_zones`
 - "这条航线穿不穿禁飞区" → `check_route_conflict`
 - "这片临时管制/设个禁飞区" → `create_zone`；"管制解除/删掉" → `delete_zone`
+- "昨天那架机飞行数据/当时电量" → `get_telemetry_history`（起止时间 yyyy-MM-dd HH:mm:ss）
+- "回放那次任务轨迹/它飞过哪里" → `get_flight_trajectory`（优先 task_id）
+- "把 XX 限高到 N 米" → `set_height_limit`（高危🔒，20-120m）
 
 ## 行动纪律
 

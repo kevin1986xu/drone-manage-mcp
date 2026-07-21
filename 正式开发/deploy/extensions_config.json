@@ -75,6 +75,33 @@
         "X-API-Key": "$UAV_MCP_API_KEY"
       },
       "description": "[nacos-bridge] 任务排期与调度域：排期建议（只算不写）、定时/循环任务、改期/取消/失败重试/断点续飞（全人在环）"
+    },
+    "uav-live-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8210/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 直播与遥测回放域：直播开流/停流/切镜头、遥测历史、轨迹回放"
+    },
+    "uav-flight-control-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8211/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 实时飞行控制域：紧急返航/急停（白名单）、指点飞行、一键起飞、喊话、限高"
+    },
+    "uav-dock-debug-mcp": {
+      "enabled": true,
+      "type": "http",
+      "url": "http://127.0.0.1:8212/mcp",
+      "headers": {
+        "X-API-Key": "$UAV_MCP_API_KEY"
+      },
+      "description": "[nacos-bridge] 机场调试与远程运维域：调试模式/舱盖/充电/重启/环境读数"
     }
   },
   "skills": {}

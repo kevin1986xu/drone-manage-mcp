@@ -1,6 +1,6 @@
 # Higress 对外网关部署（关一 · docs/07）
 
-对外服务化的唯一入口：消费方 → Higress → 从现网 Nacos MCP Registry 发现的 8 个 MCP 域。
+对外服务化的唯一入口：消费方 → Higress → 从现网 Nacos MCP Registry 发现的 11 个 MCP 域（2026-07-21 P1 三域上线后自动纳入，网关零配置）。
 本机 docker standalone 部署，**2026-07-21 全链路验证通过**（经网关 tools/list 返回 200）。
 
 ## 0. 最终可用状态（TL;DR）
@@ -58,7 +58,7 @@ docker compose -f higress-standalone.docker-compose.yml up -d
    - Nacos 命名空间ID `public`、**Nacos 服务分组列表 `DEFAULT_GROUP`**
    - **是否启用 MCP Server 功能：是**、MCP Server 路由路径前缀 `/mcp`
    - 关联域名留空（=全部域名）
-   保存后，Higress 从 MCP Registry 拉到 8 个 server，出现在「AI网关管理 → MCP 管理」。
+   保存后，Higress 从 MCP Registry 拉到全部 server（当前 11 个），出现在「AI网关管理 → MCP 管理」；后续新域上线自动纳入（含鉴权/限流，零配置）。
 3. **验证**：`curl` / httpx `POST http://localhost:8080/mcp/uav-alert-mcp/mcp`
    带 `X-API-Key` + body `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` → 200 返回工具。
 
@@ -82,9 +82,9 @@ docker compose -f higress-standalone.docker-compose.yml up -d
 3. **后端识别租户**：`mcp-services/.env` 加
    `UAV_TENANT_KEYS={"demo-key-2026-a1b2c3": {"tenant": "tenant-demo", "scopes": ["*"]}}`
    后重启 runner（命令见 §2 前置条件 3）。
-4. **验证结果**：8 个域带租户 key 全 200；无 key/错 key/后端 key
+4. **验证结果**：全部域带租户 key 全 200（8 域 2026-07-21 上午验，P1 三域当日自动纳入复验）；无 key/错 key/后端 key
    `uav-m1-test-key-2026` 直打网关全 401（后端统一 key 不再对外可用，符合预期）。
-   完整冒烟：`mcp-services/scripts/smoke_gateway.py`（8 域完整 MCP 会话 +
+   完整冒烟：`mcp-services/scripts/smoke_gateway.py`（逐域完整 MCP 会话 +
    真实工具调用穿透平台 + 负面矩阵 + 直连兼容，16 项）。
 
 ## 4.5 按租户限流（2026-07-21 已落地）
