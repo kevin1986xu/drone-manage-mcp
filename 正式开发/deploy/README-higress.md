@@ -11,10 +11,14 @@ docker compose -f higress-standalone.docker-compose.yml up -d
 ```
 
 | 端口 | 用途 | 备注 |
+| 宿主端口 | 用途 | 容器内端口 |
 |---|---|---|
-| 8080 | 网关 HTTP 入口（对外聚合的 MCP 端点） | 避开 80（需 root/易占） |
-| 8443 | 网关 HTTPS 入口 | |
-| 8888 | Higress 控制台 | **避开 8001**（DeerFlow Gateway 占用） |
+| 8080 | 网关 HTTP 入口（对外聚合的 MCP 端点） | 8080（envoy） |
+| 8443 | 网关 HTTPS 入口 | 8443 |
+| **8888** | **Higress 控制台** → http://localhost:8888 | **8001**（all-in-one 控制台端口，非标准版的 8080） |
+
+> ⚠ all-in-one 容器内：网关是 8080/8443、控制台是 **8001**（别按标准 Higress 的
+> 网关 80、控制台 8080 记——映射错会打到网关数据面，浏览器只见 "Welcome to Higress"）。
 
 - 用**内置**配置存储（不接外部 Nacos 存 higress 自身配置，避免污染现网生产 Nacos）；
 - 现网 Nacos 仅作「服务来源」，控制台配（下一步）；

@@ -21,10 +21,11 @@ services:
     # 现网 Nacos 走 VPN 才通，容器要能访问宿主网络到 192.168.101.21
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # all-in-one 容器内端口：网关 8080/8443（envoy）、控制台 8001。别按标准版的 80/8080 记
     ports:
-      - "${HIGRESS_GATEWAY_HTTP_PORT:-8080}:80"    # 网关 HTTP 入口（聚合后的 MCP 端点）
-      - "${HIGRESS_GATEWAY_HTTPS_PORT:-8443}:443"  # 网关 HTTPS 入口
-      - "${HIGRESS_CONSOLE_PORT:-8888}:8080"       # Higress 控制台（容器内 8080；避开 8001）
+      - "${HIGRESS_GATEWAY_HTTP_PORT:-8080}:8080"   # 网关 HTTP 入口（聚合后的 MCP 端点）
+      - "${HIGRESS_GATEWAY_HTTPS_PORT:-8443}:8443"  # 网关 HTTPS 入口
+      - "${HIGRESS_CONSOLE_PORT:-8888}:8001"        # Higress 控制台（容器内 8001）
     volumes:
       - higress-data:/data
     restart: unless-stopped
