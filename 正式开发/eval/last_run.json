@@ -1,0 +1,636 @@
+[
+ {
+  "id": 1,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots"
+  ],
+  "elapsed_s": 21.5,
+  "thread": "8dfb0ec9-6135-4540-8f1a-7c084b4f2828"
+ },
+ {
+  "id": 2,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots"
+  ],
+  "elapsed_s": 18.8,
+  "thread": "705b5ffb-7486-4a91-9a55-4e2b1ee035d2"
+ },
+ {
+  "id": 3,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots",
+   "query_plots"
+  ],
+  "elapsed_s": 17.3,
+  "thread": "7cb8ad84-1800-40f3-95a2-05a5cd3ea072"
+ },
+ {
+  "id": 4,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots"
+  ],
+  "elapsed_s": 19.9,
+  "thread": "6c3f0180-fdd1-4c09-bd8d-19666f1e48c0"
+ },
+ {
+  "id": 5,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots",
+   "query_plots"
+  ],
+  "elapsed_s": 14.7,
+  "thread": "5a976d7c-39e1-4f7d-a486-04459d08fa92"
+ },
+ {
+  "id": 6,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "find_nearby_drones"
+  ],
+  "elapsed_s": 17.6,
+  "thread": "a2d34ab0-d9ed-4a04-b0e0-7decc08e30a6"
+ },
+ {
+  "id": 7,
+  "hit": false,
+  "args_ok": true,
+  "called": [],
+  "elapsed_s": 5.2,
+  "thread": "d321c447-4188-43ec-b1a1-4c2cc925c777"
+ },
+ {
+  "id": 8,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "find_nearby_drones",
+   "get_device_health",
+   "read_file"
+  ],
+  "elapsed_s": 45.1,
+  "thread": "8133473e-776e-42e7-9c43-3368dc846336"
+ },
+ {
+  "id": 9,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_drone_status"
+  ],
+  "elapsed_s": 9.2,
+  "thread": "3184af80-522c-44c3-9970-9cbec92649e7"
+ },
+ {
+  "id": 10,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_drone_status",
+   "get_device_health"
+  ],
+  "elapsed_s": 11.1,
+  "thread": "ab36aaa5-5afc-41ca-bc0b-8e16e29b5bc1"
+ },
+ {
+  "id": 11,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "find_nearby_drones",
+   "generate_route"
+  ],
+  "elapsed_s": 31.6,
+  "thread": "a7c6a37a-f464-4c0e-8098-62daf5b1d1df"
+ },
+ {
+  "id": 12,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "generate_route"
+  ],
+  "elapsed_s": 20.1,
+  "thread": "c005baa5-bee9-450b-a8e2-6121c0c45660"
+ },
+ {
+  "id": 13,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "generate_route"
+  ],
+  "elapsed_s": 24.7,
+  "thread": "2064adf4-5a0a-40fa-9338-55b045cd3cd3"
+ },
+ {
+  "id": 14,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "open_route_editor"
+  ],
+  "elapsed_s": 5.8,
+  "thread": "6a644699-f944-4df6-a83e-12e8672e841b"
+ },
+ {
+  "id": 15,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "open_route_editor"
+  ],
+  "elapsed_s": 8.1,
+  "thread": "6889dae4-e702-4456-83b4-18b9c213b603"
+ },
+ {
+  "id": 16,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "open_route_editor"
+  ],
+  "elapsed_s": 6.5,
+  "thread": "92fe3630-dc63-4228-b425-d9bf193211ee"
+ },
+ {
+  "id": 17,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_route_detail"
+  ],
+  "elapsed_s": 6.4,
+  "thread": "60c1e8f8-90b0-4e0c-94c8-3479dcdfd6d8"
+ },
+ {
+  "id": 18,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_route_detail"
+  ],
+  "elapsed_s": 35.0,
+  "thread": "ec281cf4-5029-4e8e-bd6c-2c05e2ba2072"
+ },
+ {
+  "id": 19,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "explain_route"
+  ],
+  "elapsed_s": 14.9,
+  "thread": "3fa7e7a1-7826-4b22-ac8a-bb339992b64c"
+ },
+ {
+  "id": 20,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "explain_route"
+  ],
+  "elapsed_s": 13.8,
+  "thread": "d8b9e127-7236-4c80-85cd-b3c0dbca115d"
+ },
+ {
+  "id": 21,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "explain_route"
+  ],
+  "elapsed_s": 11.9,
+  "thread": "b4ea4e9b-e721-40c3-913a-d76cc211a5ef"
+ },
+ {
+  "id": 22,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "explain_route"
+  ],
+  "elapsed_s": 16.1,
+  "thread": "1ad51d85-5d0b-4bcb-b38a-1aee9b3c01fa"
+ },
+ {
+  "id": 23,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "preflight_check",
+   "take_off"
+  ],
+  "elapsed_s": 21.5,
+  "thread": "35417594-f74e-4943-893f-6136e5f52090"
+ },
+ {
+  "id": 24,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "preflight_check"
+  ],
+  "elapsed_s": 15.1,
+  "thread": "1cf65e34-b16f-4846-b0bd-faeed998d374"
+ },
+ {
+  "id": 25,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_route_detail",
+   "preflight_check"
+  ],
+  "elapsed_s": 21.4,
+  "thread": "9c40e976-c70f-469e-9aa3-4911b9d35b58"
+ },
+ {
+  "id": 26,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "check_weather"
+  ],
+  "elapsed_s": 12.5,
+  "thread": "9f66a11f-26f3-4787-a191-2c00dae8cb5d"
+ },
+ {
+  "id": 27,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "check_battery"
+  ],
+  "elapsed_s": 10.0,
+  "thread": "ab781b0f-5b90-461e-827b-4e0c63206c09"
+ },
+ {
+  "id": 28,
+  "hit": false,
+  "args_ok": true,
+  "called": [
+   "check_route_conflict"
+  ],
+  "elapsed_s": 11.6,
+  "thread": "fc50f526-2304-4b0b-b95b-2f822651335c"
+ },
+ {
+  "id": 29,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "check_drone_obstacle"
+  ],
+  "elapsed_s": 6.0,
+  "thread": "8896b0d3-0402-4908-be8e-176a10f3f612"
+ },
+ {
+  "id": 30,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "preflight_check",
+   "take_off"
+  ],
+  "elapsed_s": 27.0,
+  "thread": "ddd63d24-5e59-4b5c-b707-41f69037d924"
+ },
+ {
+  "id": 31,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots"
+  ],
+  "elapsed_s": 7.2,
+  "thread": "5d5f5858-e8af-46bf-b680-20f8c0fd48ff"
+ },
+ {
+  "id": 32,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "generate_route"
+  ],
+  "elapsed_s": 13.1,
+  "thread": "f660f59e-6ae4-4e0e-8c23-d34620898eeb"
+ },
+ {
+  "id": 33,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "generate_route"
+  ],
+  "elapsed_s": 15.2,
+  "thread": "aeef4121-6fd1-4781-8b74-17e156671141"
+ },
+ {
+  "id": 34,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "generate_route"
+  ],
+  "elapsed_s": 13.8,
+  "thread": "cbd0c833-a13b-4f5c-b3c0-5880ad8b8cf4"
+ },
+ {
+  "id": 35,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "generate_route"
+  ],
+  "elapsed_s": 24.4,
+  "thread": "81b60d99-d0fe-4392-a49f-8ea15d9af27e"
+ },
+ {
+  "id": 36,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "suggest_schedule"
+  ],
+  "elapsed_s": 34.2,
+  "thread": "95488e11-b010-4160-9001-6fb13354a7b7"
+ },
+ {
+  "id": 37,
+  "hit": false,
+  "args_ok": true,
+  "called": [
+   "suggest_schedule",
+   "find_nearby_drones"
+  ],
+  "elapsed_s": 29.9,
+  "thread": "d6bc7d0e-1456-4734-a992-3f9dc8b14141"
+ },
+ {
+  "id": 38,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "create_task_plan"
+  ],
+  "elapsed_s": 25.1,
+  "thread": "899b1029-a3d6-4434-973f-397daec1dd29"
+ },
+ {
+  "id": 39,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_task_report",
+   "list_task_history",
+   "list_scheduled_tasks"
+  ],
+  "elapsed_s": 20.2,
+  "thread": "bb8a2fb4-d582-4f8b-bcea-fa7f789d0fb1"
+ },
+ {
+  "id": 40,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_task_history"
+  ],
+  "elapsed_s": 7.4,
+  "thread": "7c31c6b9-07ce-4904-8ddd-892d3d3a08e3"
+ },
+ {
+  "id": 41,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_alerts"
+  ],
+  "elapsed_s": 19.0,
+  "thread": "ab999657-898e-4042-8f8d-1ef16d219aa7"
+ },
+ {
+  "id": 42,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_alerts"
+  ],
+  "elapsed_s": 21.3,
+  "thread": "94f328f4-1452-4624-9aa2-eb4e595738e4"
+ },
+ {
+  "id": 43,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_unhandled_count"
+  ],
+  "elapsed_s": 5.3,
+  "thread": "d914ea0a-f6fd-4259-a953-9b2ef1fcbe96"
+ },
+ {
+  "id": 44,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_device_health",
+   "list_alerts"
+  ],
+  "elapsed_s": 19.8,
+  "thread": "24532267-a79e-47c3-a586-bbb7d822e9be"
+ },
+ {
+  "id": 45,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "handle_alert"
+  ],
+  "elapsed_s": 6.9,
+  "thread": "3d24cb4c-93fa-4a7f-b232-c469ab521ba4"
+ },
+ {
+  "id": 46,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_zones"
+  ],
+  "elapsed_s": 15.2,
+  "thread": "105f82e0-57a0-4c1f-ae62-54b51e5ae2a1"
+ },
+ {
+  "id": 47,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_zones"
+  ],
+  "elapsed_s": 12.1,
+  "thread": "5a7a0b45-30e3-4591-9f57-53211f2e2e7d"
+ },
+ {
+  "id": 48,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "check_route_conflict"
+  ],
+  "elapsed_s": 12.7,
+  "thread": "7f0080eb-5ce3-4427-b0e8-55252aca3d01"
+ },
+ {
+  "id": 49,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots",
+   "create_zone"
+  ],
+  "elapsed_s": 24.6,
+  "thread": "ebde838a-ce71-42dd-8e56-5461bacaf934"
+ },
+ {
+  "id": 50,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_media"
+  ],
+  "elapsed_s": 27.5,
+  "thread": "8643fcee-e28a-4c1c-94ae-d4c3c10e9a02"
+ },
+ {
+  "id": 51,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_media_link"
+  ],
+  "elapsed_s": 18.9,
+  "thread": "a1d5c217-c977-4c08-94ec-61ad442ad126"
+ },
+ {
+  "id": 52,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_flight_videos"
+  ],
+  "elapsed_s": 8.2,
+  "thread": "4288982c-f148-4881-967d-a4e5564365ce"
+ },
+ {
+  "id": 53,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_camera_coverage",
+   "read_file"
+  ],
+  "elapsed_s": 37.2,
+  "thread": "a80535d2-5843-4f6d-91a6-f064011f4100"
+ },
+ {
+  "id": 54,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_task_report",
+   "list_media",
+   "list_flight_videos",
+   "start_3d_modeling"
+  ],
+  "elapsed_s": 28.0,
+  "thread": "1ab9f7e0-614f-4332-b703-5fe848cbc355"
+ },
+ {
+  "id": 55,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "suggest_schedule"
+  ],
+  "elapsed_s": 33.5,
+  "thread": "1f58ee5d-6e1e-41c3-9e57-370e35824b95"
+ },
+ {
+  "id": 56,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "list_scheduled_tasks"
+  ],
+  "elapsed_s": 12.4,
+  "thread": "d5e2ed2a-6ea6-41d2-bb9d-9fe1bd9183b3"
+ },
+ {
+  "id": 57,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_schedule_conflicts"
+  ],
+  "elapsed_s": 9.9,
+  "thread": "5411c150-9420-4a99-94e2-23346d318d52"
+ },
+ {
+  "id": 58,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "reschedule_task"
+  ],
+  "elapsed_s": 14.7,
+  "thread": "79288af9-e0e6-4bc0-8f2b-a2f7cca062c0"
+ },
+ {
+  "id": 59,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "get_schedule_conflicts",
+   "list_task_history",
+   "list_scheduled_tasks",
+   "list_task_history",
+   "list_scheduled_tasks"
+  ],
+  "elapsed_s": 19.5,
+  "thread": "0debce17-0953-4fa8-963c-deef8dcb2dde"
+ },
+ {
+  "id": 60,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "create_recurring_task"
+  ],
+  "elapsed_s": 13.9,
+  "thread": "ffec8ed2-afa3-470b-9fd7-0e6023721a86"
+ },
+ {
+  "id": 61,
+  "hit": true,
+  "args_ok": true,
+  "called": [
+   "query_plots",
+   "find_nearby_drones",
+   "generate_route",
+   "get_drone_status",
+   "preflight_check"
+  ],
+  "elapsed_s": 42.5,
+  "thread": "36b397ab-235d-4601-99a7-658ebb89a00e"
+ }
+]
