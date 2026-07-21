@@ -1,69 +1,111 @@
 # Higress 对外网关部署（关一 · docs/07）
 
-对外服务化的唯一入口：消费方 → Higress → 从现网 Nacos 发现的 8 个 MCP 域。
-承担多租户鉴权、限流、审计。本机 docker standalone 部署。
+对外服务化的唯一入口：消费方 → Higress → 从现网 Nacos MCP Registry 发现的 8 个 MCP 域。
+本机 docker standalone 部署，**2026-07-21 全链路验证通过**（经网关 tools/list 返回 200）。
 
-## 1. 起容器（已完成）
+## 0. 最终可用状态（TL;DR）
+
+- 对外访问：`POST http://<HOST>:8080/mcp/<server名>/mcp` + header `X-API-Key: <租户key>`
+  （消费者鉴权已启用：网关只认消费者 key，如 tenant-demo 的 `demo-key-2026-a1b2c3`，见 §4）
+  - 例：`http://localhost:8080/mcp/uav-alert-mcp/mcp`
+  - SSE 协议在末尾加 `/sse`
+- Higress 从 Nacos **MCP Registry** 自动发现（服务来源开「MCP Server 功能」），
+  后端地址/端口对消费方隐藏；**不需要**手动「创建 MCP 服务」选后端。
+- 路由不显示在「路由配置」列表里（Higress 提示如此），MCP server 在「MCP 管理」页。
+
+## 1. 起容器
 
 ```bash
 cd 正式开发/deploy
 docker compose -f higress-standalone.docker-compose.yml up -d
 ```
 
-| 端口 | 用途 | 备注 |
 | 宿主端口 | 用途 | 容器内端口 |
 |---|---|---|
-| 8080 | 网关 HTTP 入口（对外聚合的 MCP 端点） | 8080（envoy） |
+| 8080 | 网关 HTTP 入口（对外 MCP 端点） | 8080（envoy） |
 | 8443 | 网关 HTTPS 入口 | 8443 |
-| **8888** | **Higress 控制台** → http://localhost:8888 | **8001**（all-in-one 控制台端口，非标准版的 8080） |
+| **8888** | **Higress 控制台** → http://localhost:8888 | **8001** |
 
-> ⚠ all-in-one 容器内：网关是 8080/8443、控制台是 **8001**（别按标准 Higress 的
-> 网关 80、控制台 8080 记——映射错会打到网关数据面，浏览器只见 "Welcome to Higress"）。
+> ⚠ all-in-one 容器内：网关 8080/8443、控制台 **8001**（别按标准版的 80/8080 记，
+> 映射错会打到网关数据面，浏览器只见 "Welcome to Higress"）。内置配置存储，不污染现网 Nacos。
 
-- 用**内置**配置存储（不接外部 Nacos 存 higress 自身配置，避免污染现网生产 Nacos）；
-- 现网 Nacos 仅作「服务来源」，控制台配（下一步）；
-- 已验证：容器可访问现网 Nacos（192.168.101.21:8998）并用 `nacos/Geostar2025!` 登录成功。
+## 2. 前置条件（血泪，缺一不可）
 
-## 2. 控制台配置（首次需浏览器初始化，五步）
-
-浏览器打开 `http://localhost:8888`：
-
-0. **⚠ 先注册普通服务实例（关键前置，否则「创建 MCP 服务」的后端服务下拉是空的）**：
-   mcp-services 只注册在 Nacos **MCP Registry（ai/mcp）**，而 Higress v2.2.3「创建
-   MCP 服务 → 后端服务」读的是**普通服务列表（ns/instance）**，两套注册面不通。
-   跑一次补注册（Nacos 3.2.1 只认 v3/admin/ns/instance，v1 报 501、v2 报 404）：
+1. **Nacos gRPC（主端口+1000）必须是有效 gRPC**：Higress 走 Nacos SDK gRPC=`8998+1000=9998`
+   订阅服务/读 MCP 配置。验证：`httpx.get("http://<nacos>:9998/")` 应抛 **RemoteProtocolError**
+   （=HTTP2/gRPC 活）；若返回 HTTP/1.1 则该端口不是有效 gRPC（曾因此 controller 卡
+   `client not connected, STARTING`、MCP 管理空、网关 404）。9080 是 MCP Registry 端口
+   （`nacos.ai.mcp.registry.port`），同为 gRPC。
+2. **容器到 Nacos 9998/9080 + 到后端 mcp-services 都要通**：Mac docker 容器实测可达宿主
+   en0（`.116:820x`）与现网 Nacos。（`/dev/tcp` 在容器 busybox 不可靠，用 wget/httpx 验。）
+3. **endpoint 实例存在**：MCP server 规格（postgres 持久）引用 `mcp-endpoints` 组的
+   `<name>::<ver>` 服务实例（ephemeral）。**Nacos 或 mcp-services 重启后 endpoint 实例会丢
+   → 网关 503**，需重启 mcp-services（runner）重新注册找回：
    ```bash
-   cd mcp-services && PYTHONPATH=src .venv/bin/python scripts/register_gateway_instances.py
+   cd mcp-services && pkill -f uav_mcp.runner; nohup .venv/bin/python -m uav_mcp.runner &
+   # 等日志 "Registry 已注册/更新" 满 8 条
    ```
-   注册 8 个 persistent 普通实例（IP=MCP_SERVICE_IP，Higress 容器可达的宿主 en0；
-   IP 变更后重跑）。Nacos 普通服务列表随即出现 8 个纯名 `uav-*-mcp`。
-1. **初始化管理员账号**（首次访问，Higress 要求设一个控制台账号；本环境 admin/Geostar2025!）。
-2. **服务来源**：新增 Nacos3 类型来源 → 地址 `192.168.101.21:8998`、用户名 `nacos`、
-   密码 `Geostar2025!`、命名空间 `public`。保存后「服务列表」出现 8 个 `uav-*-mcp`。
-3. **创建 MCP 服务**（AI 网关管理 → MCP 管理 → 创建 MCP 服务）：服务类型
-   `streamable-http`、路径 `/mcp`、**后端服务**下拉选纯名 `uav-*-mcp`（非 ::0.1.0 后缀的）；
-   对外访问 `http://<HOST>:8080/mcp-servers/<服务名>`，后端地址端口对消费方隐藏。
-4. **消费者鉴权**（关一多租户）：建消费者 → 分配 key（对应 mcp-services 的
-   `UAV_TENANT_KEYS` 租户），在路由上启用 key-auth / JWT 插件。
-5. **限流 + 审计**：按消费者配速率；开访问日志。
 
-> 完整的对外治理（多租户/限流/审计）落在这一层；mcp-services 代码零改。
-> 工具级白名单也在此做——MCP 的 tool 名在 JSON-RPC body 里，服务端中间件看不到。
+## 3. 控制台配置
 
-## 3. 网络收口（信任边界②）
+浏览器 `http://localhost:8888`：
 
-Higress 就位后，mcp-services 应只收网关流量，堵直连 820x 端口绕过：
-生产用防火墙/网络策略限制 820x 仅网关可达；更严用 mTLS。
+1. **初始化管理员账号**（首次；本环境 admin/Geostar2025!）。
+2. **服务来源**（服务来源 → 创建）：
+   - 类型 `Nacos 3.x`、注册中心地址 `192.168.101.21`、端口 `8998`
+   - **是否开启认证：是** → 用户名 `nacos`、密码 `Geostar2025!`（**现网 Nacos 开了认证，
+     不开则 403、拉不到任何东西**——曾卡在此）
+   - Nacos 命名空间ID `public`、**Nacos 服务分组列表 `DEFAULT_GROUP`**
+   - **是否启用 MCP Server 功能：是**、MCP Server 路由路径前缀 `/mcp`
+   - 关联域名留空（=全部域名）
+   保存后，Higress 从 MCP Registry 拉到 8 个 server，出现在「AI网关管理 → MCP 管理」。
+3. **验证**：`curl` / httpx `POST http://localhost:8080/mcp/uav-alert-mcp/mcp`
+   带 `X-API-Key` + body `{"jsonrpc":"2.0","id":1,"method":"tools/list"}` → 200 返回工具。
 
-## 4. 与平台回源网关（关三）区别
+## 4. 消费者鉴权（关一多租户，**2026-07-21 已落地**）
 
-**别混淆两个网关**：
-- **Higress（本机 8080）**：关一，对外入口，消费方 → mcp-services；
-- **平台网关（demo-lt:11412）**：关三，回源出口，mcp-services → drone-manage（admin 认证）。
+架构（docs/07 §4.1 阶段1）：**租户 key 网关校验后原样透传**，后端 `UAV_TENANT_KEYS`
+查表识别租户（注入 `scope.uav_tenant` 供审计）——不做 header 改写，两层都认识租户 key。
+
+1. **建消费者**（控制台 → 消费者管理）：`tenant-demo`，Key Auth，
+   令牌来源=自定义 HTTP Header `X-API-Key`，key `demo-key-2026-a1b2c3`。
+2. **开全局认证**：⚠ 这版控制台**没有**全局认证开关，且注册中心自动发现的 MCP server
+   **不能**用「MCP 管理」的消费者授权 API（它要求 `mcp-server-<name>.internal` 路由，
+   仅控制台手建 server 有）。唯一路径是改 key-auth 插件资源（容器内嵌 apiserver，
+   匿名可写；不支持 merge-patch，须 GET→改→PUT 整个对象）：
+   ```bash
+   # GET 资源 → 把 spec.defaultConfig.global_auth 改为 true → PUT 回去
+   docker exec uav-higress curl -sk https://localhost:18443/apis/extensions.higress.io/v1alpha1/namespaces/higress-system/wasmplugins/key-auth.internal
+   ```
+   watch 热更新，秒级生效，无需重启。console 自身的 default 路由已有豁免
+   matchRule（`configDisable: true`），不受影响。
+3. **后端识别租户**：`mcp-services/.env` 加
+   `UAV_TENANT_KEYS={"demo-key-2026-a1b2c3": {"tenant": "tenant-demo", "scopes": ["*"]}}`
+   后重启 runner（命令见 §2 前置条件 3）。
+4. **验证结果**：8 个域带租户 key 全 200；无 key/错 key/后端 key
+   `uav-m1-test-key-2026` 直打网关全 401（后端统一 key 不再对外可用，符合预期）。
+
+## 5. 网络收口 + 两网关区别
+
+- **收口（信任边界②）**：Higress 就位后，mcp-services 限制 820x 仅网关可达（防火墙/mTLS）。
+- **别混淆两个网关**：Higress（本机 8080，关一，消费方→工具）vs 平台网关
+  （demo-lt:11412，关三，工具→drone-manage，admin 认证）。
+
+## 6. 排障速查（本次踩坑顺序）
+
+| 症状 | 根因 | 解法 |
+|---|---|---|
+| MCP 管理空、网关 404 | 服务来源认证=否（Nacos 要认证） | 开认证 nacos/Geostar2025! |
+| controller 日志 `STARTING` | 9998 非有效 gRPC（返 HTTP1） | 修 Nacos gRPC（重新部署/端口转发） |
+| 网关 503 | endpoint 实例丢（Nacos/mcp-services 重启） | 重启 mcp-services 重新注册 |
+| 网关 404（重注册后） | Higress 缓存旧路由 | 重启 Higress 强制重新同步 |
+| 网关 401（空 body） | 没带/带错租户 key（global_auth 开启后后端统一 key 也不行） | 带消费者 key（如 tenant-demo 的） |
+| 后端 401（`{"error": ...}` body） | 网关放行但后端 UAV_TENANT_KEYS 没这个 key | .env 加 key→租户映射，重启 runner |
+| runner 起不来 `[Errno 48] 8201` | pkill 后老进程未退干净就起新的 | 等 1-2 秒确认 `lsof -iTCP:8201` 空了再起 |
 
 ## 停/日志
 
 ```bash
-docker compose -f higress-standalone.docker-compose.yml logs -f higress
-docker compose -f higress-standalone.docker-compose.yml down      # 加 -v 删数据卷
+docker exec uav-higress tail -f /var/log/higress/controller.log   # controller（发现/同步）
+docker compose -f higress-standalone.docker-compose.yml down       # 加 -v 删数据卷
 ```
