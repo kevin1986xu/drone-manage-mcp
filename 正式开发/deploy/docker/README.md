@@ -4,6 +4,29 @@
 Gateway/BFF/前端是验证脚手架，不在本编排（按需本机跑或后续单独镜像）。
 Higress 对外网关用独立 compose（`../higress-standalone.docker-compose.yml`）。
 
+## ⚠ CPU 架构（ARM 开发机 → Intel 服务器）
+
+镜像分架构。**开发机 ARM（Apple Silicon）、服务器 Intel（amd64）时，不要在 Mac
+上 build 完拷过去**——我们的镜像依赖含 pydantic-core(Rust)/uvloop(C) 等按架构
+编译的 wheel，arm64 构建产物在 amd64 上会 `exec format error`。两条正确路径：
+
+**① 推荐：直接在 Intel 服务器上构建。** compose 是 `build:` 模式，基础镜像
+（python/nacos/higress 均多架构含 amd64）按服务器架构自动拉，Python 依赖 wheel
+按 amd64 解析。把代码传到服务器 `docker compose ... up -d --build` 即可，零跨架构操作。
+
+**② 次选：Mac 上 buildx 跨架构构建再推 registry。**
+```bash
+docker buildx build --platform linux/amd64 -f deploy/docker/Dockerfile.mcp \
+  -t <registry>/uav-mcp-services:amd64 --push .
+docker buildx build --platform linux/amd64 -f deploy/docker/Dockerfile.extensions \
+  -t <registry>/uav-approval:amd64 --push .
+# Nacos/Higress 无需自建，服务器 pull 时自动取 amd64
+```
+
+基础镜像架构（已核，均含 amd64）：python:3.12/3.13-slim、nacos/nacos-server:v3.0.2、
+higress all-in-one。**本机（ARM Mac）仅用于验证编排**——higress/nacos 在 Mac 上走
+arm64 原生或 QEMU，能跑但别把 Mac 构建的自建镜像当成服务器产物。
+
 ## 镜像与容器
 
 | 容器 | 镜像 | 端口 | 对宿主暴露 | 说明 |
