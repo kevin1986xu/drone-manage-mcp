@@ -4,3 +4,7 @@ __pycache__/
 .env
 .pytest_cache/
 deerflow/
+
+# docker 部署环境（凭据）
+.env.docker
+deploy/docker/.env.docker

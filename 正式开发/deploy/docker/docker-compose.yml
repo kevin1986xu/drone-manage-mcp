@@ -1,0 +1,90 @@
+# 核心三件套 Docker 编排（mcp-services + 审批 + UI）——生产 Linux
+#
+# 构建上下文统一为 正式开发/（上两级），故所有 build.context: ../..
+# 运行前：cp .env.docker.example .env.docker 并按注释填值
+#
+#   cd 正式开发/deploy/docker
+#   cp .env.docker.example .env.docker && vim .env.docker
+#   docker compose --env-file .env.docker up -d --build
+# （compose 默认只读 .env；本编排用 .env.docker，故须显式 --env-file）
+#
+# 网络：三容器同一 bridge 网（uav-net），服务间用服务名互连
+# （approval / ui）。对宿主/外部暴露：mcp 工具端口（供 Higress 经 Nacos 发现）
+# 与 ui 8213（供浏览器打开 view_url）。审批 8205 仅内网，不对外暴露。
+
+name: uav-core
+
+services:
+  approval:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.extensions
+    image: uav-approval:latest
+    container_name: uav-approval
+    restart: unless-stopped
+    environment:
+      APPROVAL_ADMIN_KEY: ${APPROVAL_ADMIN_KEY}
+      APPROVAL_FOUR_EYES_ACTIONS: ${APPROVAL_FOUR_EYES_ACTIONS:-}
+      APPROVAL_HOST: 0.0.0.0
+    networks: [uav-net]
+    # 不 publish 到宿主：审批是服务间调用（mcp/ui 经服务名访问），生产内网收口
+
+  ui:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.extensions
+    image: uav-approval:latest       # 与 approval 同镜像
+    container_name: uav-ui
+    restart: unless-stopped
+    command: ["python", "-m", "uav_extensions.ui_service"]
+    environment:
+      APPROVAL_BASE: http://approval:8205        # 内网服务名
+      UAV_MCP_API_KEY: ${UAV_MCP_API_KEY}
+      UI_HOST: 0.0.0.0
+      UI_PUBLIC_BASE: ${UI_PUBLIC_BASE}          # 对外可达地址！view_url 给浏览器开
+    ports:
+      - "8213:8213"
+    depends_on: [approval]
+    networks: [uav-net]
+
+  mcp-services:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/Dockerfile.mcp
+    image: uav-mcp-services:latest
+    container_name: uav-mcp-services
+    restart: unless-stopped
+    environment:
+      # ── 平台回源（现网，容器直连外部）──
+      DRONE_API_BASE: ${DRONE_API_BASE}
+      DRONE_GATEWAY_BASE: ${DRONE_GATEWAY_BASE}
+      DRONE_LOGIN_USERNAME: ${DRONE_LOGIN_USERNAME}
+      DRONE_LOGIN_PASSWORD: ${DRONE_LOGIN_PASSWORD}
+      DRONE_USER_ID_HEADER: ${DRONE_USER_ID_HEADER:-}
+      # ── 工具面鉴权 ──
+      UAV_MCP_API_KEY: ${UAV_MCP_API_KEY}
+      UAV_TENANT_KEYS: ${UAV_TENANT_KEYS:-}
+      # ── 审批 / UI（审批走内网服务名；UI 给浏览器故用对外地址）──
+      APPROVAL_BASE: http://approval:8205
+      UAV_UI_BASE: ${UI_PUBLIC_BASE}
+      # ── Nacos 注册（现网）：MCP_SERVICE_IP 必须是 Higress/消费方能到的地址
+      #    ——生产 Linux 填宿主机内网 IP（配合下方 ports 映射），不是容器内 IP ──
+      NACOS_SERVER_ADDR: ${NACOS_SERVER_ADDR}
+      NACOS_USERNAME: ${NACOS_USERNAME}
+      NACOS_PASSWORD: ${NACOS_PASSWORD}
+      NACOS_ENDPOINT_MODE: ${NACOS_ENDPOINT_MODE:-direct}
+      MCP_SERVICE_IP: ${MCP_SERVICE_IP}
+      MCP_HOST: 0.0.0.0
+      # ── 真实写开关（默认关，只建不飞）──
+      UAV_CREATE_REAL_TASK: ${UAV_CREATE_REAL_TASK:-0}
+      UAV_REAL_PUBLISH: ${UAV_REAL_PUBLISH:-0}
+    ports:
+      # 映射到宿主，使 MCP_SERVICE_IP:<port> 对 Higress/消费方可达
+      - "8201-8204:8201-8204"
+      - "8206-8212:8206-8212"
+    depends_on: [approval, ui]
+    networks: [uav-net]
+
+networks:
+  uav-net:
+    driver: bridge

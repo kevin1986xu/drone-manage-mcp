@@ -1,0 +1,15 @@
+# mcp-services（十一域 MCP，py3.13）——对外交付的核心能力层
+# 构建上下文 = 正式开发/（含 mcp-services/）
+FROM python:3.13-slim
+
+WORKDIR /app
+# 先装依赖（利用层缓存）：只有 pyproject 变才重装
+COPY mcp-services/pyproject.toml ./
+COPY mcp-services/src ./src
+RUN pip install --no-cache-dir .
+
+# .env 不打进镜像——运行时由 compose env_file / environment 注入
+# 端口：8201-8204 + 8206-8212（8205 是审批服务，不在本镜像）
+EXPOSE 8201 8202 8203 8204 8206 8207 8208 8209 8210 8211 8212
+
+CMD ["python", "-m", "uav_mcp.runner"]
