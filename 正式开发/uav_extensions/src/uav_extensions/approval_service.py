@@ -31,6 +31,11 @@ logger = logging.getLogger(__name__)
 
 TOKEN_TTL_S = 600
 ADMIN_KEY = os.getenv("APPROVAL_ADMIN_KEY", "").strip()
+# 四眼原则（docs/09 §4）：列出的动作要求"发起人 ≠ 审批人"才放行。
+# 逗号分隔的 action 名；默认空（发起=审批同人，演示/单人运维不挡）。
+FOUR_EYES_ACTIONS = {
+    a.strip() for a in os.getenv("APPROVAL_FOUR_EYES_ACTIONS", "").split(",") if a.strip()
+}
 
 app = FastAPI(title="UAV 高危审批服务", version="0.1.0")
 
@@ -70,11 +75,15 @@ def create_pending(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
         # 页面 token（docs/08 通用前端）：持有 URL 者可查看/确认该单——能力等同
         # GIS 卡片上的确认按钮；与 confirm_token（执行凭证）是两回事
         "page_token": secrets.token_urlsafe(18),
+        # 身份（docs/09）：发起对话的人 / 点确认的人；追责到人 + 四眼原则
+        "initiated_by": (body.get("initiated_by") or "").strip() or None,
+        "confirmed_by": None,
         "expires_at": time.time() + TOKEN_TTL_S,
         "created_at": time.time(),
     }
     _pending[item["action_id"]] = item
-    logger.info("待确认单登记：%s %s", item["action_id"], item["action"])
+    logger.info("待确认单登记：%s %s 发起=%s", item["action_id"], item["action"],
+                item["initiated_by"] or "-")
     return {k: item[k] for k in ("action_id", "action", "summary", "status", "expires_at", "page_token")}
 
 
@@ -93,8 +102,12 @@ def list_pending(status: str | None = None,
 
 
 @app.post("/api/approval/{action_id}/approve")
-def approve(action_id: str, x_admin_key: str | None = Header(default=None)) -> dict[str, Any]:
-    """人工批准 → 签发一次性 confirm_token（唯一签发点）。"""
+def approve(action_id: str, x_admin_key: str | None = Header(default=None),
+            x_user_id: str | None = Header(default=None)) -> dict[str, Any]:
+    """人工批准 → 签发一次性 confirm_token（唯一签发点）。
+
+    审批人身份来自 X-User-Id（docs/09）；四眼动作要求发起人 ≠ 审批人。
+    """
     _check_admin(x_admin_key)
     item = _pending.get(action_id)
     if not item:
@@ -104,12 +117,21 @@ def approve(action_id: str, x_admin_key: str | None = Header(default=None)) -> d
     if time.time() > item["expires_at"]:
         item["status"] = "expired"
         raise HTTPException(410, "确认单已过期，请重新发起")
+    confirmed_by = (x_user_id or "").strip() or None
+    if item["action"] in FOUR_EYES_ACTIONS:
+        if not confirmed_by:
+            raise HTTPException(403, "该动作要求审批人实名（四眼原则），缺少审批人身份")
+        if confirmed_by == item.get("initiated_by"):
+            raise HTTPException(403, "四眼原则：发起人不得自行审批，需第二人确认")
     item["status"] = "approved"
     item["token"] = secrets.token_urlsafe(24)
+    item["confirmed_by"] = confirmed_by
     item["expires_at"] = time.time() + TOKEN_TTL_S
-    logger.info("确认单批准：%s %s", action_id, item["action"])
+    logger.info("确认单批准：%s %s 发起=%s 审批=%s", action_id, item["action"],
+                item.get("initiated_by") or "-", confirmed_by or "-")
     return {"action_id": action_id, "action": item["action"],
-            "confirm_token": item["token"], "params": item["params"]}
+            "confirm_token": item["token"], "params": item["params"],
+            "initiated_by": item.get("initiated_by"), "confirmed_by": confirmed_by}
 
 
 @app.post("/api/approval/{action_id}/cancel")
@@ -136,16 +158,19 @@ def page_detail(action_id: str, t: str | None = None) -> dict[str, Any]:
     item = _check_page_token(action_id, t)
     if item["status"] == "pending" and time.time() > item["expires_at"]:
         item["status"] = "expired"
-    return {k: item[k] for k in ("action_id", "action", "summary", "status", "expires_at", "created_at")}
+    return {k: item[k] for k in ("action_id", "action", "summary", "status",
+                                 "expires_at", "created_at", "initiated_by", "confirmed_by")}
 
 
 @app.post("/api/approval/{action_id}/approve-by-page")
-def approve_by_page(action_id: str, t: str | None = None) -> dict[str, Any]:
+def approve_by_page(action_id: str, t: str | None = None,
+                    u: str | None = None) -> dict[str, Any]:
     """确认卡片页的确认按钮（page_token 即确认能力，等同 GIS 卡片按钮）。
 
+    审批人 u 来自签名链接绑定的用户身份（docs/09 阶段1 声明式）。
     返回 confirm_token 由页面展示为 [SYSTEM_CONFIRMATION] 一行，用户带回对话。"""
     _check_page_token(action_id, t)
-    return approve(action_id, x_admin_key=ADMIN_KEY or None)
+    return approve(action_id, x_admin_key=ADMIN_KEY or None, x_user_id=u)
 
 
 @app.post("/api/approval/{action_id}/cancel-by-page")

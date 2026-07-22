@@ -20,7 +20,7 @@ from typing import Any
 
 import httpx
 
-from uav_mcp import config
+from uav_mcp import config, identity
 from uav_mcp.state import STATE
 
 logger = logging.getLogger(__name__)
@@ -31,10 +31,12 @@ TOKEN_TTL_S = 600
 def create_pending_action(action: str, params: dict[str, Any], summary: dict[str, Any]) -> dict[str, Any]:
     """登记待确认单，返回 {action_id, ...}。远程失败时**拒绝降级**——
     审批链路不可用即高危操作不可用（安全红线优先于可用性）。"""
+    initiated_by = identity.current_user()
     if config.APPROVAL_BASE:
         resp = httpx.post(
             f"{config.APPROVAL_BASE}/api/approval/pending",
-            json={"action": action, "params": params, "summary": summary},
+            json={"action": action, "params": params, "summary": summary,
+                  "initiated_by": initiated_by},  # docs/09 追责：发起人
             timeout=8,
         )
         resp.raise_for_status()
@@ -42,8 +44,12 @@ def create_pending_action(action: str, params: dict[str, Any], summary: dict[str
         # docs/08 通用前端：确认卡片页地址（page_token 即查看/确认能力）。
         # UI 服务未部署则无此字段，各宿主照旧走卡片组件。
         if config.UAV_UI_BASE and item.get("page_token"):
-            item["view_url"] = (f"{config.UAV_UI_BASE}/ui/approval/"
-                                f"{item['action_id']}?t={item.pop('page_token')}")
+            url = f"{config.UAV_UI_BASE}/ui/approval/{item['action_id']}?t={item.pop('page_token')}"
+            # docs/09 阶段1：默认审批人=发起人（单人运维场景，追责到人成立）。
+            # 四眼动作要求发起≠审批，此默认会被拒→需阶段2 认证提供第二人身份。
+            if initiated_by:
+                url += f"&u={initiated_by}"
+            item["view_url"] = url
         else:
             item.pop("page_token", None)
         return item
@@ -54,6 +60,8 @@ def create_pending_action(action: str, params: dict[str, Any], summary: dict[str
         "summary": summary,
         "status": "pending",  # pending -> approved -> consumed / cancelled / expired
         "token": None,
+        "initiated_by": initiated_by,
+        "confirmed_by": None,
         "expires_at": time.time() + TOKEN_TTL_S,
         "created_at": time.time(),
     }

@@ -98,8 +98,10 @@ async def approval_detail(action_id: str, t: str) -> Any:
 
 
 @app.post("/ui/api/approval/{action_id}/approve")
-async def approval_approve(action_id: str, t: str) -> Any:
-    return await _approval("POST", f"/api/approval/{action_id}/approve-by-page?t={t}")
+async def approval_approve(action_id: str, t: str, u: str | None = None) -> Any:
+    # u = 审批人身份（docs/09 阶段1，来自签名链接绑定的用户）
+    suffix = f"&u={u}" if u else ""
+    return await _approval("POST", f"/api/approval/{action_id}/approve-by-page?t={t}{suffix}")
 
 
 @app.post("/ui/api/approval/{action_id}/cancel")
@@ -135,6 +137,7 @@ _APPROVAL_HTML = """<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
 <div class="card">
   <h1>高危操作确认单 <span id="status" class="badge b-other">加载中</span></h1>
   <div class="sub" id="aid"></div>
+  <div class="sub" id="who"></div>
   <table id="rows"></table>
   <div id="msg"></div>
   <div id="actions" style="display:none">
@@ -148,11 +151,19 @@ _APPROVAL_HTML = """<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
   </div>
 </div>
 <script>
-const q = new URLSearchParams(location.search), t = q.get('t');
+const q = new URLSearchParams(location.search), t = q.get('t'), u = q.get('u')||'';
 const aid = location.pathname.split('/').pop();
-const api = p => fetch(`/ui/api/approval/${{aid}}${{p}}?t=${{encodeURIComponent(t)}}`, p.includes('approve')||p.includes('cancel')?{{method:'POST'}}:undefined).then(async r=>{{if(!r.ok) throw new Error((await r.json()).detail||r.status); return r.json()}});
+const api = p => {{
+  const uparam = p.includes('approve') && u ? `&u=${{encodeURIComponent(u)}}` : '';
+  return fetch(`/ui/api/approval/${{aid}}${{p}}?t=${{encodeURIComponent(t)}}${{uparam}}`, p.includes('approve')||p.includes('cancel')?{{method:'POST'}}:undefined).then(async r=>{{if(!r.ok) throw new Error((await r.json()).detail||r.status); return r.json()}});
+}};
 function render(d){{
   document.getElementById('aid').textContent = `${{d.action_id}} · ${{d.action}}`;
+  const parts = [];
+  if(d.initiated_by) parts.push(`发起人：${{d.initiated_by}}`);
+  if(u) parts.push(`当前审批人：${{u}}`);
+  if(d.confirmed_by) parts.push(`已由 ${{d.confirmed_by}} 确认`);
+  document.getElementById('who').textContent = parts.join('　·　');
   const st = document.getElementById('status');
   st.textContent = {{pending:'待确认',approved:'已确认',consumed:'已执行',cancelled:'已取消',expired:'已过期'}}[d.status]||d.status;
   st.className = 'badge ' + (d.status==='pending'?'b-pending':d.status==='approved'?'b-approved':'b-other');

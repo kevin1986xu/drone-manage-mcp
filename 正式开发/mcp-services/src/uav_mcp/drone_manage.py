@@ -23,7 +23,7 @@ from typing import Any
 
 import httpx
 
-from uav_mcp import config, geo
+from uav_mcp import config, geo, identity
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +127,8 @@ class DroneManageClient:
         elif config.DRONE_PLATFORM_TOKEN:
             headers["Authorization"] = f"Bearer {config.DRONE_PLATFORM_TOKEN}"
         if config.DRONE_USER_ID_HEADER:
-            uid = _current_user_id.get()
+            # 显式 set_platform_identity 优先；否则取请求级身份（docs/09 中间件注入）
+            uid = _current_user_id.get() or identity.current_user()
             if uid:
                 headers[config.DRONE_USER_ID_HEADER] = uid
         return headers

@@ -20,6 +20,8 @@ import json
 import logging
 from typing import Any
 
+from uav_mcp import identity
+
 logger = logging.getLogger(__name__)
 
 _ANON = {"tenant": "anonymous", "scopes": ["*"]}
@@ -56,8 +58,8 @@ class ApiKeyMiddleware:
         if scope.get("path", "").rstrip("/") == "/healthz":
             await self._respond(send, 200, {"status": "ok"})
             return
+        headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
         if self.tenants:
-            headers = {k.decode("latin-1").lower(): v.decode("latin-1") for k, v in scope.get("headers", [])}
             provided = headers.get("x-api-key", "")
             meta = self._match(provided) if provided else None
             if meta is None:
@@ -67,7 +69,18 @@ class ApiKeyMiddleware:
             scope["uav_tenant"] = meta  # 下游拦截器/审计取用
         else:
             scope["uav_tenant"] = _ANON
-        await self.app(scope, receive, send)
+        # 用户身份（docs/09 阶段1）：X-User-Id 声明的用户注入请求级 contextvar，
+        # 供确认单 initiated_by / 回源 dataScope 透传 / 审计追责到人。
+        user = (headers.get("x-user-id") or "").strip() or None
+        base = scope["uav_tenant"]
+        ident = {"tenant": base.get("tenant"), "user": user,
+                 "scopes": base.get("scopes", ["*"])}
+        scope["uav_identity"] = ident
+        token = identity.set_identity(ident)
+        try:
+            await self.app(scope, receive, send)
+        finally:
+            identity.reset_identity(token)
 
     @staticmethod
     async def _respond(send, status: int, body: dict) -> None:
