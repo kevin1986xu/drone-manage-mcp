@@ -114,11 +114,15 @@ def emergency_stop(drone_id: str) -> dict[str, Any]:
 # ── 高危🔒：confirm_token 两阶段 ─────────────────────────────
 
 def _job_of(task_id: str) -> str | None:
-    """flight_task_id → 平台 wayline jobId（暂停/恢复要 jobId）。"""
+    """flight_task_id → 平台 wayline jobId（暂停/恢复要 jobId）。
+
+    ⚠ 平台搜索接口会**忽略不认识的过滤键**（taskId 传了≠过滤了，2026-07-22
+    E2E 实测返回全量作业）——必须客户端侧校验归属，否则暂停会打到别人的 job。
+    """
     try:
-        rows = get_client().wayline_jobs_search({"pageNum": 1, "pageSize": 20, "taskId": task_id})
+        rows = get_client().wayline_jobs_search({"pageNum": 1, "pageSize": 50, "taskId": task_id})
         for r in rows:
-            if r.get("jobId"):
+            if r.get("jobId") and str(r.get("taskId")) == str(task_id):
                 return str(r["jobId"])
     except DroneManageError:
         pass
@@ -135,6 +139,7 @@ def _pause_resume(task_id: str, resume: bool, confirm_token: str | None) -> dict
                       ["影响", "飞行中航线立即" + ("续飞" if resume else "悬停暂停")]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": action, "summary": item["summary"],
                 "message": f"{label}任务为高危操作，已生成确认单，请人工确认。"}
     item = approval.validate_and_consume(action, confirm_token)
@@ -169,6 +174,7 @@ def fly_to_point(drone_id: str, lon: float, lat: float, alt_m: float,
                       ["前置", "需已夺取飞行控制权且无人机为手动模式"]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": "fly_to_point", "summary": item["summary"],
                 "message": "指点飞行为高危操作，已生成确认单，请人工确认。"}
     item = approval.validate_and_consume("fly_to_point", confirm_token)
@@ -220,6 +226,7 @@ def takeoff_to_point(drone_id: str, lon: float, lat: float, alt_m: float = 100.0
                       ["提示", "应急响应第一动作：从机场直接起飞奔赴事发点"]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": "takeoff_to_point", "summary": item["summary"],
                 "message": "一键起飞为高危操作，已生成确认单，请人工确认。"}
     item = approval.validate_and_consume("takeoff_to_point", confirm_token)
@@ -256,6 +263,7 @@ def speaker_tts(drone_id: str, text: str, confirm_token: str | None = None) -> d
                       ["播放原文", text], ["红线", "喊话内容以本确认单原文为准，不得改写"]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": "speaker_tts", "summary": item["summary"],
                 "message": "喊话为高危操作（对外发声），确认单已生成——请人工核准喊话原文。"}
     item = approval.validate_and_consume("speaker_tts", confirm_token)
@@ -313,6 +321,7 @@ def set_height_limit(drone_id: str, limit_m: int, confirm_token: str | None = No
             {"rows": [["动作", "设置无人机限高"], ["设备", drone_id], ["限高", f"{limit_m}m"]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": "set_height_limit", "summary": item["summary"],
                 "message": "改限高为高危操作，已生成确认单。"}
     item = approval.validate_and_consume("set_height_limit", confirm_token)

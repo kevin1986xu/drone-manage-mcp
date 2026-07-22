@@ -60,6 +60,9 @@ DRONE_USER_ID_HEADER = os.getenv("DRONE_USER_ID_HEADER", "").strip()
 # 未配置则进程内本地模式（语义相同，仅限开发）。
 APPROVAL_BASE = os.getenv("APPROVAL_BASE", "").strip().rstrip("/")
 
+# ── 通用前端 UI 服务（docs/08；不配则工具不返回 view_url，全部照旧）──
+UAV_UI_BASE = os.getenv("UAV_UI_BASE", "").strip().rstrip("/")
+
 # ── 服务监听 ─────────────────────────────────────────────────
 MCP_HOST = os.getenv("MCP_HOST", "0.0.0.0")
 # 各域端口（与演示版 8101-8104 错开）

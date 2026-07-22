@@ -149,9 +149,15 @@ def get_flight_trajectory(task_id: str | None = None, drone_id: str | None = Non
     points = data if isinstance(data, list) else (data or {}).get("points") or []
     line = [[p.get("longitude"), p.get("latitude")] for p in points
             if isinstance(p, dict) and p.get("longitude") is not None][:2000]
+    view_url = None
+    if line:
+        from uav_mcp import ui_client
+        view_url = ui_client.register_view(
+            "trajectory", f"轨迹回放 {task_id or drone_id}", {"line": line})
     return {
         "task_id": task_id, "count": len(line),
         "trajectory": line,
         "view_directive": {"type": "show_trajectory", "line": line} if line else None,
+        "view_url": view_url,
         "note": None if line else "该任务/时段无轨迹数据",
     }

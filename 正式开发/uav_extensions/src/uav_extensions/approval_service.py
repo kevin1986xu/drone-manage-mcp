@@ -67,12 +67,15 @@ def create_pending(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
         "summary": body["summary"],
         "status": "pending",  # pending -> approved -> consumed / cancelled / expired
         "token": None,
+        # 页面 token（docs/08 通用前端）：持有 URL 者可查看/确认该单——能力等同
+        # GIS 卡片上的确认按钮；与 confirm_token（执行凭证）是两回事
+        "page_token": secrets.token_urlsafe(18),
         "expires_at": time.time() + TOKEN_TTL_S,
         "created_at": time.time(),
     }
     _pending[item["action_id"]] = item
     logger.info("待确认单登记：%s %s", item["action_id"], item["action"])
-    return {k: item[k] for k in ("action_id", "action", "summary", "status", "expires_at")}
+    return {k: item[k] for k in ("action_id", "action", "summary", "status", "expires_at", "page_token")}
 
 
 @app.get("/api/approval/pending")
@@ -118,6 +121,37 @@ def cancel(action_id: str, x_admin_key: str | None = Header(default=None)) -> di
     item["status"] = "cancelled"
     item["token"] = None
     return {"action_id": action_id, "status": "cancelled"}
+
+
+def _check_page_token(action_id: str, t: str | None) -> dict[str, Any]:
+    item = _pending.get(action_id)
+    if not item or not t or t != item.get("page_token"):
+        raise HTTPException(404, "确认单不存在或链接无效")
+    return item
+
+
+@app.get("/api/approval/{action_id}/page")
+def page_detail(action_id: str, t: str | None = None) -> dict[str, Any]:
+    """确认卡片页取详情（page_token 门禁，不需要 admin key；不含任何 token）。"""
+    item = _check_page_token(action_id, t)
+    if item["status"] == "pending" and time.time() > item["expires_at"]:
+        item["status"] = "expired"
+    return {k: item[k] for k in ("action_id", "action", "summary", "status", "expires_at", "created_at")}
+
+
+@app.post("/api/approval/{action_id}/approve-by-page")
+def approve_by_page(action_id: str, t: str | None = None) -> dict[str, Any]:
+    """确认卡片页的确认按钮（page_token 即确认能力，等同 GIS 卡片按钮）。
+
+    返回 confirm_token 由页面展示为 [SYSTEM_CONFIRMATION] 一行，用户带回对话。"""
+    _check_page_token(action_id, t)
+    return approve(action_id, x_admin_key=ADMIN_KEY or None)
+
+
+@app.post("/api/approval/{action_id}/cancel-by-page")
+def cancel_by_page(action_id: str, t: str | None = None) -> dict[str, Any]:
+    _check_page_token(action_id, t)
+    return cancel(action_id, x_admin_key=ADMIN_KEY or None)
 
 
 @app.post("/api/approval/consume")

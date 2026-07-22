@@ -38,7 +38,15 @@ def create_pending_action(action: str, params: dict[str, Any], summary: dict[str
             timeout=8,
         )
         resp.raise_for_status()
-        return resp.json()
+        item = resp.json()
+        # docs/08 通用前端：确认卡片页地址（page_token 即查看/确认能力）。
+        # UI 服务未部署则无此字段，各宿主照旧走卡片组件。
+        if config.UAV_UI_BASE and item.get("page_token"):
+            item["view_url"] = (f"{config.UAV_UI_BASE}/ui/approval/"
+                                f"{item['action_id']}?t={item.pop('page_token')}")
+        else:
+            item.pop("page_token", None)
+        return item
     item = {
         "action_id": STATE.next_id("ACT"),
         "action": action,

@@ -95,6 +95,7 @@ def debug_mode(dock_id: str, open_: bool, confirm_token: str | None = None) -> d
                       ["影响", "调试期间机场不可执行飞行任务" if open_ else "结束调试，机场恢复可用"]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": action, "summary": item["summary"],
                 "message": f"{label}为高危操作，已生成确认单。"}
     item = approval.validate_and_consume(action, confirm_token)
@@ -134,6 +135,7 @@ def _debug_action(dock_id: str, action_key: str, confirm_token: str | None) -> d
             {"rows": [["动作", spec["label"]], ["机场", dock_id], ["前置", "调试模式已开启 ✓"]]},
         )
         return {"status": "requires_confirmation", "action_id": item["action_id"],
+                "view_url": item.get("view_url"),
                 "action": action_key, "summary": item["summary"],
                 "message": f"{spec['label']}为高危操作，已生成确认单。"}
     item = approval.validate_and_consume(action_key, confirm_token)
