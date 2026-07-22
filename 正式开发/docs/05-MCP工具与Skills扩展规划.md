@@ -281,7 +281,7 @@ allowed-tools 按 §6.1 可见性矩阵声明）,评测集同步扩至 60 条（
 |---|---|---|---|
 | **P0（下一里程碑）** | uav-airspace-mcp（根治 preflight 空域占位）+ uav-alert-mcp + uav-media-mcp + **uav-task-schedule-mcp（suggest_schedule/定时循环/重排期/失败重试/断点续飞）**;evidence-report + smart-scheduling skill;评测集扩 ~20 条（含紧急白名单注入反向用例）;各域 contract smoke test（§6.3） | 平台现有接口,无新部署 | 5-6 天 |
 | **P1 ✅（2026-07-21 落地）** | uav-live-mcp（7 工具）+ uav-flight-control-mcp（12 工具,含紧急白名单⚡防注入三件套+设备级操作锁）+ uav-dock-debug-mcp（10 工具,顺序闸）;emergency-response + dock-maintenance skill;batch-patrol 补全（失败重试/断点续飞/每日汇总） | **喊话器/探照灯/舱盖/指点/一键起飞等写面为真机联调项**（读面契约冒烟已过）;直播开流需设备 MQTT 在线 | 实际 1 天 |
-| **P1.5** | uav-recognition-mcp + smart-recognition 补全 + daily-situation | AI 推理平台在现网可用性待确认（RabbitMQ 队列/模型服务） | 3-5 天 |
+| **P1.5 ⛔（2026-07-22 探明被阻塞）** | uav-recognition-mcp + smart-recognition 补全 + daily-situation | **ai-identification-consumer 微服务未部署/未接入现网网关**（/ai/* 全 404；代码在 ruoyi-modules/ai-identification-consumer，controller 前缀 /ai/tasks·alerts·dashboard 等已盘点）——等平台侧部署即可开工 | 3-5 天 |
 | **P2** | dispatch-order / ops(固件资产) / workflow 三域 + 权限透传（Agent≤用户） | 多用户/生产化诉求明确后 | 5-8 天 |
 
 **建议 P0 先动 uav-airspace-mcp**：工作量最小（复用 flyWorkZone 客户端与 geo.py）、

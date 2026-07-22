@@ -18,7 +18,7 @@
    - 现为**八域**（8201-8204 + 8206-8209）；Nacos 并发注册在 VPN 上会集体超时,
      runner 已按端口错峰+退避重试,等日志里"已注册/已更新"两词合计 8 条再进下一步
 3. **⚠ 不要跑 nacos_bridge（本机部署）**：Gateway 与 mcp-services 同在本机,
-   `deerflow/extensions_config.json` 的 url 用 **`127.0.0.1:820x`**（`cp deploy/extensions_config.json deerflow/` 即是 127 版）,本机互连**免疫 en0 IP 漂移**,IP 变了也不用改这份。bridge 会从 Nacos 旧注册把 url 改回失效 IP、甚至清空 mcpServers（2026-07-21 踩过:bridge 清空 config → Gateway MCP tools=0 → 评测全零）。改完 config **必须重启 Gateway**（它启动时读一次 config）,触发一次对话后看日志 `MCP tools: 45`（八域全加载;若 0 先查 config url 是不是 127 + 重启 Gateway）。
+   `deerflow/extensions_config.json` 的 url 用 **`127.0.0.1:820x`**（`cp deploy/extensions_config.json deerflow/` 即是 127 版）,本机互连**免疫 en0 IP 漂移**,IP 变了也不用改这份。bridge 会从 Nacos 旧注册把 url 改回失效 IP、甚至清空 mcpServers（2026-07-21 踩过:bridge 清空 config → Gateway MCP tools=0 → 评测全零）。改完 config **必须重启 Gateway**（它启动时读一次 config）,触发一次对话后看日志 `MCP tools: 74`（**十一域**全加载,2026-07-21 P1 后;若 0 先查 config url 是不是 127 + 重启 Gateway）。
 4. **跑平台契约冒烟**（接口漂移早发现——平台侧仍在活跃迭代）：
    ```bash
    cd 正式开发/mcp-services && PYTHONPATH=src .venv/bin/python scripts/contract_smoke.py
@@ -34,7 +34,7 @@
 | 3 | mcp-services（见上一节,已起） | 8201-04 + 8206-09 | `for p in 8201 8202 8203 8204 8206 8207 8208 8209; do curl -m 3 localhost:$p/healthz; done` 八个全 ok |
 | 4 | 审批服务 | 8205 | `curl localhost:8205/healthz` |
 | 5 | nacos_bridge（已起） | — | 日志出现"已同步 8 个 server 到 DeerFlow" |
-| 6 | DeerFlow Gateway | 8001 | `curl -X POST localhost:8001/api/threads -d '{}' -H 'Content-Type: application/json'` 返回 thread_id;日志 **`loaded 45 tool(s)`**（八域全发现）且**无 `Skipping MCP server`**（有=工具发现失败,重启 Gateway） |
+| 6 | DeerFlow Gateway | 8001 | `curl -X POST localhost:8001/api/threads -d '{}' -H 'Content-Type: application/json'` 返回 thread_id;日志 **`loaded 74 tool(s)`**（十一域全发现,2026-07-21 P1 后）且**无 `Skipping MCP server`**（有=工具发现失败,重启 Gateway） |
 | 7 | BFF | 8300 | `curl localhost:8300/api/config` → `"agent_mode":"deerflow"` |
 | 8 | DeerFlow 前端（可选,平台化环节用） `pnpm exec next dev --webpack` | 3000 | 首次要 /setup 建管理员账号;**必须 --webpack**（Turbopack 中文路径 panic） |
 

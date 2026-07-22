@@ -103,6 +103,17 @@ curl -b <cookie> -X PUT http://localhost:8888/v1/global/plugin-instances/key-rat
 实测：130 连发 → 精确 120×200 + 10×429，窗口 1 分钟重置。新租户在
 `limit_keys` 加条目即可；不在表内的 key 不限流（但早被 key-auth 401 挡了）。
 
+## 4.6 网关审计（2026-07-22 已落地）
+
+access log（`/var/log/higress/gateway.log`，JSON 每行一条）已加 **`consumer` 字段**
+（key-auth 认证通过后的消费者名，未认证为 `-`）：谁的租户 key、何时、调了哪个域、
+响应码/耗时/上游，全部可追溯。改法：embedded apiserver PUT configmap
+`higress-config` 的 `mesh.accessLogFormat` 加 `"consumer":"%REQ(X-MSE-CONSUMER)%"`，
+**须重启容器生效**。查询示例：
+```bash
+docker exec uav-higress grep '"consumer":"tenant-demo"' /var/log/higress/gateway.log | tail
+```
+
 ## 5. 网络收口 + 两网关区别
 
 - **收口（信任边界②，待做）**：mcp-services 限制 820x 仅网关可达。本机 demo 环境
@@ -124,6 +135,8 @@ curl -b <cookie> -X PUT http://localhost:8888/v1/global/plugin-instances/key-rat
 | 后端 401（`{"error": ...}` body） | 网关放行但后端 UAV_TENANT_KEYS 没这个 key | .env 加 key→租户映射，重启 runner |
 | runner 起不来 `[Errno 48] 8201` | pkill 后老进程未退干净就起新的 | 等 1-2 秒确认 `lsof -iTCP:8201` 空了再起 |
 | 网关 429 | 该租户 key 触发限流（120/min，压测后常见） | 等 1 分钟窗口重置；调 §4.5 limit_keys |
+| 网关**时好时坏**（约半数 503 UF） | en0 漂移后 mcp-endpoints 组**新旧持久实例并存**（`ephemeral:false` 永不过期），负载均衡各打一半 | 删旧 IP 实例：`DELETE /nacos/v3/admin/ns/instance?...&ip=<旧IP>&ephemeral=false`（2026-07-22 实踩：.116→.118） |
+| mesh 配置（accessLogFormat 等）改了不生效 | envoy 不热载 mesh 段 | `docker restart uav-higress`（起来后各域首请求可能 503 一次，等同步） |
 
 ## 停/日志
 
